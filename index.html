@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Vyhledání dokumentu v Národní digitální knihovně podle identifikátoru Handle.">
+    <title>Handle → UUID | Národní digitální knihovna</title>
+
+    <style>
+        :root {
+            color-scheme: light;
+            --background: #f5f7fa;
+            --surface: #ffffff;
+            --text: #202124;
+            --muted: #5f6368;
+            --border: #d7dce2;
+            --primary: #185abc;
+            --primary-hover: #124a9c;
+            --secondary: #eef3fb;
+            --error: #a50e0e;
+            --success: #137333;
+            --shadow: 0 8px 24px rgba(32, 33, 36, 0.08);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background: var(--background);
+            color: var(--text);
+            font-family: Arial, Helvetica, sans-serif;
+            line-height: 1.5;
+        }
+
+        main {
+            width: min(760px, calc(100% - 32px));
+            margin: 0 auto;
+            padding: 48px 0;
+        }
+
+        .panel {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            box-shadow: var(--shadow);
+            padding: 32px;
+        }
+
+        h1 {
+            margin: 0 0 12px;
+            font-size: clamp(1.8rem, 4vw, 2.5rem);
+            line-height: 1.15;
+        }
+
+        .intro {
+            margin: 0 0 28px;
+            color: var(--muted);
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 700;
+        }
+
+        .hint {
+            margin: 8px 0 0;
+            color: var(--muted);
+            font-size: 0.92rem;
+        }
+
+        input,
+        button,
+        a.button {
+            font: inherit;
+        }
+
+        input {
+            width: 100%;
+            min-height: 48px;
+            padding: 11px 13px;
+            border: 1px solid #7a8088;
+            border-radius: 8px;
+            background: #fff;
+            color: var(--text);
+        }
+
+        input:focus {
+            outline: 3px solid rgba(24, 90, 188, 0.24);
+            border-color: var(--primary);
+        }
+
+        .submit-button {
+            width: 100%;
+            min-height: 48px;
+            margin-top: 16px;
+            border: 0;
+            border-radius: 8px;
+            background: var(--primary);
+            color: #fff;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .submit-button:hover {
+            background: var(--primary-hover);
+        }
+
+        .submit-button:focus-visible,
+        .button:focus-visible,
+        .copy-button:focus-visible {
+            outline: 3px solid rgba(24, 90, 188, 0.32);
+            outline-offset: 2px;
+        }
+
+        .submit-button:disabled {
+            cursor: wait;
+            opacity: 0.7;
+        }
+
+        #status {
+            min-height: 24px;
+            margin-top: 20px;
+        }
+
+        .status-error {
+            color: var(--error);
+            font-weight: 700;
+        }
+
+        .status-success {
+            color: var(--success);
+            font-weight: 700;
+        }
+
+        #results {
+            margin-top: 24px;
+        }
+
+        .result {
+            padding: 24px;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            background: #fff;
+        }
+
+        .result + .result {
+            margin-top: 16px;
+        }
+
+        .result h2 {
+            margin: 0 0 18px;
+            font-size: 1.35rem;
+            line-height: 1.3;
+        }
+
+        .metadata {
+            display: grid;
+            grid-template-columns: 130px minmax(0, 1fr);
+            gap: 10px 16px;
+            margin: 0 0 22px;
+        }
+
+        .metadata dt {
+            font-weight: 700;
+        }
+
+        .metadata dd {
+            margin: 0;
+            overflow-wrap: anywhere;
+        }
+
+        code {
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 0.95em;
+        }
+
+        .actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .button,
+        .copy-button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 44px;
+            padding: 10px 16px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .button {
+            border: 1px solid var(--primary);
+            background: var(--primary);
+            color: #fff;
+        }
+
+        .button:hover {
+            background: var(--primary-hover);
+            border-color: var(--primary-hover);
+        }
+
+        .copy-button {
+            border: 1px solid var(--primary);
+            background: var(--secondary);
+            color: var(--primary);
+        }
+
+        .copy-button:hover {
+            background: #dfe9f8;
+        }
+
+        footer {
+            margin-top: 18px;
+            color: var(--muted);
+            font-size: 0.9rem;
+            text-align: center;
+        }
+
+        @media (max-width: 560px) {
+            main {
+                width: min(100% - 20px, 760px);
+                padding: 20px 0;
+            }
+
+            .panel {
+                padding: 22px 18px;
+            }
+
+            .metadata {
+                grid-template-columns: 1fr;
+                gap: 4px;
+            }
+
+            .metadata dd {
+                margin-bottom: 10px;
+            }
+
+            .actions {
+                flex-direction: column;
+            }
+
+            .button,
+            .copy-button {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <main>
+        <section class="panel" aria-labelledby="page-title">
+            <h1 id="page-title">Vyhledání dokumentu podle Handle</h1>
+
+            <p class="intro">
+                Zadejte identifikátor Handle nebo celý trvalý odkaz Krameria.
+                Aplikace vyhledá UUID dokumentu a vytvoří odkaz do Národní digitální knihovny.
+            </p>
+
+            <form id="search-form">
+                <label for="handle-input">Handle dokumentu</label>
+
+                <input
+                    id="handle-input"
+                    name="handle"
+                    type="text"
+                    placeholder="Např. ABA001/12539252"
+                    autocomplete="off"
+                    spellcheck="false"
+                    required
+                >
+
+                <p class="hint">
+                    Lze vložit také adresu
+                    http://kramerius.nkp.cz/kramerius/handle/ABA001/12539252
+                </p>
+
+                <button id="submit-button" class="submit-button" type="submit">
+                    Vyhledat dokument
+                </button>
+            </form>
+
+            <div id="status" role="status" aria-live="polite"></div>
+            <div id="results"></div>
+        </section>
+
+        <footer>
+            Data jsou načítána z veřejného API Kramerius 7.
+        </footer>
+    </main>
+
+    <script>
+        "use strict";
+
+        const API_URL =
+            "https://api.kramerius7.nkp.cz/search/api/client/v7.0/search";
+
+        const DOCUMENT_URL =
+            "https://www.ndk.cz/view/";
+
+        const form = document.getElementById("search-form");
+        const handleInput = document.getElementById("handle-input");
+        const submitButton = document.getElementById("submit-button");
+        const statusBox = document.getElementById("status");
+        const resultsBox = document.getElementById("results");
+
+        form.addEventListener("submit", async (event) => {
+            event.preventDefault();
+
+            clearOutput();
+
+            const normalizedHandle = normalizeHandle(handleInput.value);
+
+            if (!normalizedHandle) {
+                showStatus("Zadejte platný identifikátor Handle.", "error");
+                handleInput.focus();
+                return;
+            }
+
+            setLoading(true);
+
+            const solrQuery =
+                `id_other:"handle:${escapeSolrValue(normalizedHandle)}"`;
+
+            const parameters = new URLSearchParams({
+                q: solrQuery,
+                fl: "pid,root.title,datum_str",
+                rows: "50",
+                start: "0",
+                wt: "json"
+            });
+
+            try {
+                const response = await fetch(`${API_URL}?${parameters.toString()}`, {
+                    method: "GET",
+                    headers: {
+                        "Accept": "application/json"
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`API vrátilo HTTP ${response.status}.`);
+                }
+
+                const data = await response.json();
+                const documents = data?.response?.docs ?? [];
+
+                if (documents.length === 0) {
+                    showStatus(
+                        "Pro zadaný Handle nebyl nalezen žádný dokument.",
+                        "error"
+                    );
+                    return;
+                }
+
+                const validDocuments = documents.filter(
+                    document => typeof document.pid === "string" && document.pid
+                );
+
+                if (validDocuments.length === 0) {
+                    showStatus(
+                        "Záznam byl nalezen, ale neobsahuje identifikátor UUID.",
+                        "error"
+                    );
+                    return;
+                }
+
+                showStatus(
+                    validDocuments.length === 1
+                        ? "Dokument byl nalezen."
+                        : `Bylo nalezeno více dokumentů: ${validDocuments.length}.`,
+                    "success"
+                );
+
+                renderResults(validDocuments, normalizedHandle);
+            } catch (error) {
+                console.error(error);
+
+                showStatus(
+                    "Nepodařilo se spojit s API Krameria. " +
+                    "Příčinou může být dočasná nedostupnost služby nebo blokování požadavku prohlížečem (CORS).",
+                    "error"
+                );
+            } finally {
+                setLoading(false);
+            }
+        });
+
+        function normalizeHandle(value) {
+            return value
+                .trim()
+                .replace(
+                    /^https?:\/\/kramerius\.nkp\.cz\/kramerius\/handle\//i,
+                    ""
+                )
+                .replace(/^handle:/i, "")
+                .replace(/^\/+|\/+$/g, "")
+                .trim();
+        }
+
+        function escapeSolrValue(value) {
+            return value
+                .replace(/\\/g, "\\\\")
+                .replace(/"/g, '\\"');
+        }
+
+        function renderResults(documents, normalizedHandle) {
+            resultsBox.replaceChildren();
+
+            documents.forEach((document, index) => {
+                const pid = document.pid;
+                const title = getDisplayValue(
+                    document["root.title"],
+                    "Dokument bez uvedeného názvu"
+                );
+                const year = getDisplayValue(
+                    document.datum_str,
+                    "neuveden"
+                );
+
+                const section = documentElement("section", "result");
+                section.setAttribute(
+                    "aria-labelledby",
+                    `result-title-${index}`
+                );
+
+                const heading = documentElement("h2");
+                heading.id = `result-title-${index}`;
+                heading.textContent = title;
+
+                const metadata = documentElement("dl", "metadata");
+
+                appendMetadata(metadata, "Rok vydání", year);
+
+                const uuidCode = document.createElement("code");
+                uuidCode.textContent = pid;
+                appendMetadata(metadata, "UUID", uuidCode);
+
+                const handleCode = document.createElement("code");
+                handleCode.textContent = normalizedHandle;
+                appendMetadata(metadata, "Handle", handleCode);
+
+                const actions = documentElement("div", "actions");
+
+                const documentLink = documentElement("a", "button");
+                documentLink.href = DOCUMENT_URL + encodeURIComponent(pid);
+                documentLink.target = "_blank";
+                documentLink.rel = "noopener noreferrer";
+                documentLink.textContent = "Otevřít v NDK";
+
+                const copyUuidButton = documentElement("button", "copy-button");
+                copyUuidButton.type = "button";
+                copyUuidButton.textContent = "Kopírovat UUID";
+                copyUuidButton.addEventListener("click", () => {
+                    copyText(pid, copyUuidButton);
+                });
+
+                const copyHandleButton = documentElement("button", "copy-button");
+                copyHandleButton.type = "button";
+                copyHandleButton.textContent = "Kopírovat Handle";
+                copyHandleButton.addEventListener("click", () => {
+                    copyText(normalizedHandle, copyHandleButton);
+                });
+
+                actions.append(
+                    documentLink,
+                    copyUuidButton,
+                    copyHandleButton
+                );
+
+                section.append(heading, metadata, actions);
+                resultsBox.appendChild(section);
+            });
+        }
+
+        function appendMetadata(container, label, value) {
+            const term = document.createElement("dt");
+            term.textContent = label;
+
+            const description = document.createElement("dd");
+
+            if (value instanceof Node) {
+                description.appendChild(value);
+            } else {
+                description.textContent = value;
+            }
+
+            container.append(term, description);
+        }
+
+        function getDisplayValue(value, fallback) {
+            if (Array.isArray(value)) {
+                const nonEmptyValues = value
+                    .map(item => String(item).trim())
+                    .filter(Boolean);
+
+                return nonEmptyValues.length
+                    ? nonEmptyValues.join(", ")
+                    : fallback;
+            }
+
+            if (value === null || value === undefined) {
+                return fallback;
+            }
+
+            const text = String(value).trim();
+            return text || fallback;
+        }
+
+        async function copyText(text, button) {
+            const originalText = button.textContent;
+
+            try {
+                await navigator.clipboard.writeText(text);
+                button.textContent = "Zkopírováno";
+            } catch (error) {
+                console.error(error);
+                button.textContent = "Kopírování se nezdařilo";
+            }
+
+            window.setTimeout(() => {
+                button.textContent = originalText;
+            }, 1800);
+        }
+
+        function setLoading(isLoading) {
+            submitButton.disabled = isLoading;
+            submitButton.textContent = isLoading
+                ? "Vyhledávám…"
+                : "Vyhledat dokument";
+
+            if (isLoading) {
+                showStatus("Probíhá vyhledávání v digitální knihovně…");
+            }
+        }
+
+        function showStatus(message, type = "") {
+            statusBox.textContent = message;
+            statusBox.className = "";
+
+            if (type === "error") {
+                statusBox.classList.add("status-error");
+            }
+
+            if (type === "success") {
+                statusBox.classList.add("status-success");
+            }
+        }
+
+        function clearOutput() {
+            statusBox.textContent = "";
+            statusBox.className = "";
+            resultsBox.replaceChildren();
+        }
+
+        function documentElement(tagName, className = "") {
+            const element = document.createElement(tagName);
+
+            if (className) {
+                element.className = className;
+            }
+
+            return element;
+        }
+    </script>
+</body>
+</html>
