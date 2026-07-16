@@ -3,12 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Vyhledání dokumentu v Národní digitální knihovně podle identifikátoru Handle.">
-    <title>Handle → UUID | Národní digitální knihovna</title>
+    <meta name="description" content="Vyhledání dokumentu podle identifikátoru Handle.">
+    <title>Vyhledání dokumentu podle Handle</title>
 
     <style>
         :root {
-            color-scheme: light;
             --background: #f5f7fa;
             --surface: #ffffff;
             --text: #202124;
@@ -36,17 +35,17 @@
         }
 
         main {
-            width: min(760px, calc(100% - 32px));
+            width: min(820px, calc(100% - 32px));
             margin: 0 auto;
             padding: 48px 0;
         }
 
         .panel {
+            padding: 32px;
             background: var(--surface);
             border: 1px solid var(--border);
             border-radius: 14px;
             box-shadow: var(--shadow);
-            padding: 32px;
         }
 
         h1 {
@@ -64,12 +63,6 @@
             display: block;
             margin-bottom: 8px;
             font-weight: 700;
-        }
-
-        .hint {
-            margin: 8px 0 0;
-            color: var(--muted);
-            font-size: 0.92rem;
         }
 
         input,
@@ -93,6 +86,13 @@
             border-color: var(--primary);
         }
 
+        .hint {
+            margin: 8px 0 0;
+            color: var(--muted);
+            font-size: 0.92rem;
+            overflow-wrap: anywhere;
+        }
+
         .submit-button {
             width: 100%;
             min-height: 48px;
@@ -107,13 +107,6 @@
 
         .submit-button:hover {
             background: var(--primary-hover);
-        }
-
-        .submit-button:focus-visible,
-        .button:focus-visible,
-        .copy-button:focus-visible {
-            outline: 3px solid rgba(24, 90, 188, 0.32);
-            outline-offset: 2px;
         }
 
         .submit-button:disabled {
@@ -136,30 +129,26 @@
             font-weight: 700;
         }
 
-        #results {
+        #result {
             margin-top: 24px;
         }
 
-        .result {
+        .result-card {
             padding: 24px;
             border: 1px solid var(--border);
             border-radius: 12px;
             background: #fff;
         }
 
-        .result + .result {
-            margin-top: 16px;
-        }
-
-        .result h2 {
+        .result-card h2 {
             margin: 0 0 18px;
-            font-size: 1.35rem;
+            font-size: 1.45rem;
             line-height: 1.3;
         }
 
         .metadata {
             display: grid;
-            grid-template-columns: 130px minmax(0, 1fr);
+            grid-template-columns: 170px minmax(0, 1fr);
             gap: 10px 16px;
             margin: 0 0 22px;
         }
@@ -225,9 +214,9 @@
             text-align: center;
         }
 
-        @media (max-width: 560px) {
+        @media (max-width: 600px) {
             main {
-                width: min(100% - 20px, 760px);
+                width: min(100% - 20px, 820px);
                 padding: 20px 0;
             }
 
@@ -262,8 +251,8 @@
             <h1 id="page-title">Vyhledání dokumentu podle Handle</h1>
 
             <p class="intro">
-                Zadejte identifikátor Handle nebo celý trvalý odkaz Krameria.
-                Aplikace vyhledá UUID dokumentu a vytvoří odkaz do Národní digitální knihovny.
+                Zadejte identifikátor Handle nebo celý trvalý odkaz dokumentu.
+                Aplikace vyhledá odpovídající dokument a zobrazí základní informace o něm.
             </p>
 
             <form id="search-form">
@@ -290,7 +279,7 @@
             </form>
 
             <div id="status" role="status" aria-live="polite"></div>
-            <div id="results"></div>
+            <div id="result"></div>
         </section>
 
         <footer>
@@ -307,20 +296,33 @@
         const DOCUMENT_URL =
             "https://www.ndk.cz/view/";
 
+        const MODEL_LABELS = {
+            monograph: "Monografie",
+            periodical: "Periodikum",
+            periodicalvolume: "Ročník periodika",
+            periodicalitem: "Číslo periodika",
+            page: "Stránka",
+            article: "Článek",
+            map: "Mapa",
+            graphic: "Grafika",
+            sheetmusic: "Notový tisk",
+            manuscript: "Rukopis",
+            soundrecording: "Zvukový dokument"
+        };
+
         const form = document.getElementById("search-form");
         const handleInput = document.getElementById("handle-input");
         const submitButton = document.getElementById("submit-button");
         const statusBox = document.getElementById("status");
-        const resultsBox = document.getElementById("results");
+        const resultBox = document.getElementById("result");
 
         form.addEventListener("submit", async (event) => {
             event.preventDefault();
-
             clearOutput();
 
-            const normalizedHandle = normalizeHandle(handleInput.value);
+            const handle = normalizeHandle(handleInput.value);
 
-            if (!normalizedHandle) {
+            if (!handle) {
                 showStatus("Zadejte platný identifikátor Handle.", "error");
                 handleInput.focus();
                 return;
@@ -328,33 +330,10 @@
 
             setLoading(true);
 
-            const solrQuery =
-                `id_other:"handle:${escapeSolrValue(normalizedHandle)}"`;
-
-            const parameters = new URLSearchParams({
-                q: solrQuery,
-                fl: "pid,root.title,datum_str",
-                rows: "50",
-                start: "0",
-                wt: "json"
-            });
-
             try {
-                const response = await fetch(`${API_URL}?${parameters.toString()}`, {
-                    method: "GET",
-                    headers: {
-                        "Accept": "application/json"
-                    }
-                });
+                const records = await searchHandle(handle);
 
-                if (!response.ok) {
-                    throw new Error(`API vrátilo HTTP ${response.status}.`);
-                }
-
-                const data = await response.json();
-                const documents = data?.response?.docs ?? [];
-
-                if (documents.length === 0) {
+                if (records.length === 0) {
                     showStatus(
                         "Pro zadaný Handle nebyl nalezen žádný dokument.",
                         "error"
@@ -362,39 +341,207 @@
                     return;
                 }
 
-                const validDocuments = documents.filter(
-                    document => typeof document.pid === "string" && document.pid
-                );
+                const record = selectBestResult(records, handle);
 
-                if (validDocuments.length === 0) {
+                if (!record) {
                     showStatus(
-                        "Záznam byl nalezen, ale neobsahuje identifikátor UUID.",
+                        "Dokument byl nalezen, ale nepodařilo se určit správný záznam.",
                         "error"
                     );
                     return;
                 }
 
-                showStatus(
-                    validDocuments.length === 1
-                        ? "Dokument byl nalezen."
-                        : `Bylo nalezeno více dokumentů: ${validDocuments.length}.`,
-                    "success"
-                );
-
-                renderResults(validDocuments, normalizedHandle);
+                renderResult(record, handle);
+                showStatus("Dokument byl nalezen.", "success");
             } catch (error) {
                 console.error(error);
 
-                const message =
+                showStatus(
                     error instanceof TypeError
-                        ? "Prohlížeč nemohl načíst odpověď API. Může jít o blokování CORS nebo síťovou chybu."
-                        : `Vyhledávání selhalo: ${error.message}`;
-
-                showStatus(message, "error");
+                        ? "Prohlížeč nemohl načíst odpověď API. Může jít o síťovou chybu nebo blokování CORS."
+                        : `Vyhledávání selhalo: ${error.message}`,
+                    "error"
+                );
             } finally {
                 setLoading(false);
             }
         });
+
+        async function searchHandle(handle) {
+            const query = `id_other:"handle:${escapeSolrValue(handle)}"`;
+
+            const parameters = new URLSearchParams({
+                q: query,
+                fl: [
+                    "pid",
+                    "date.str",
+                    "page.number",
+                    "root.model",
+                    "model",
+                    "root.title",
+                    "title.search",
+                    "id_other"
+                ].join(","),
+                rows: "1000",
+                start: "0",
+                wt: "json"
+            });
+
+            const response = await fetch(
+                `${API_URL}?${parameters.toString()}`,
+                {
+                    headers: {
+                        "Accept": "application/json"
+                    }
+                }
+            );
+
+            if (!response.ok) {
+                throw new Error(`API vrátilo HTTP ${response.status}.`);
+            }
+
+            const data = await response.json();
+            return data?.response?.docs ?? [];
+        }
+
+        function selectBestResult(records, handle) {
+            const exactHandle = `handle:${handle}`.toLowerCase();
+
+            const exactMatches = records.filter((record) =>
+                toArray(record.id_other)
+                    .map((value) => String(value).toLowerCase())
+                    .includes(exactHandle)
+            );
+
+            const candidates = exactMatches.length > 0
+                ? exactMatches
+                : records;
+
+            const priority = {
+                monograph: 100,
+                periodicalvolume: 95,
+                periodical: 90,
+                periodicalitem: 85,
+                article: 80,
+                page: 70
+            };
+
+            return [...candidates]
+                .filter((record) => firstValue(record.pid))
+                .sort((a, b) => {
+                    const scoreA = priority[firstValue(a.model)] ?? 10;
+                    const scoreB = priority[firstValue(b.model)] ?? 10;
+                    return scoreB - scoreA;
+                })[0] ?? null;
+        }
+
+        function renderResult(record, handle) {
+            resultBox.replaceChildren();
+
+            const pid = firstValue(record.pid);
+            const model = firstValue(record.model);
+            const rootModel = firstValue(record["root.model"]);
+            const title = getDocumentTitle(record);
+            const year = firstValue(record["date.str"]);
+            const pageNumber = firstValue(record["page.number"]);
+            const documentType = getDocumentType(model, rootModel);
+
+            const card = createElement("section", "result-card");
+            const heading = document.createElement("h2");
+            heading.textContent = title;
+
+            const metadata = createElement("dl", "metadata");
+
+            appendMetadata(metadata, "Typ dokumentu", documentType);
+
+            if (year) {
+                appendMetadata(metadata, "Rok vydání", year);
+            }
+
+            if (pageNumber) {
+                appendMetadata(metadata, "Číslo stránky", pageNumber);
+            }
+
+            const uuidCode = document.createElement("code");
+            uuidCode.textContent = pid;
+            appendMetadata(metadata, "UUID", uuidCode);
+
+            const handleCode = document.createElement("code");
+            handleCode.textContent = handle;
+            appendMetadata(metadata, "Handle", handleCode);
+
+            const actions = createElement("div", "actions");
+
+            const documentLink = createElement("a", "button");
+            documentLink.href = DOCUMENT_URL + encodeURIComponent(pid);
+            documentLink.target = "_blank";
+            documentLink.rel = "noopener noreferrer";
+            documentLink.textContent = "Otevřít dokument v NDK";
+
+            const copyUuidButton = createElement("button", "copy-button");
+            copyUuidButton.type = "button";
+            copyUuidButton.textContent = "Kopírovat UUID";
+            copyUuidButton.addEventListener("click", () => {
+                copyToClipboard(pid, copyUuidButton);
+            });
+
+            const copyHandleButton = createElement("button", "copy-button");
+            copyHandleButton.type = "button";
+            copyHandleButton.textContent = "Kopírovat Handle";
+            copyHandleButton.addEventListener("click", () => {
+                copyToClipboard(handle, copyHandleButton);
+            });
+
+            actions.append(
+                documentLink,
+                copyUuidButton,
+                copyHandleButton
+            );
+
+            card.append(heading, metadata, actions);
+            resultBox.appendChild(card);
+        }
+
+        function getDocumentTitle(record) {
+            const model = firstValue(record.model);
+
+            if (model === "page") {
+                return (
+                    firstValue(record["root.title"]) ||
+                    firstValue(record["title.search"]) ||
+                    "Dokument bez uvedeného názvu"
+                );
+            }
+
+            if (
+                model === "periodicalvolume" ||
+                model === "periodicalitem"
+            ) {
+                return (
+                    firstValue(record["root.title"]) ||
+                    firstValue(record["title.search"]) ||
+                    "Dokument bez uvedeného názvu"
+                );
+            }
+
+            return (
+                firstValue(record["title.search"]) ||
+                firstValue(record["root.title"]) ||
+                "Dokument bez uvedeného názvu"
+            );
+        }
+
+        function getDocumentType(model, rootModel) {
+            if (model === "page" && rootModel === "monograph") {
+                return "Stránka monografie";
+            }
+
+            if (model === "page" && rootModel === "periodical") {
+                return "Stránka periodika";
+            }
+
+            return MODEL_LABELS[model] || model || "Neurčený typ dokumentu";
+        }
 
         function normalizeHandle(value) {
             return value
@@ -414,73 +561,24 @@
                 .replace(/"/g, '\\"');
         }
 
-        function renderResults(documents, normalizedHandle) {
-            resultsBox.replaceChildren();
-
-            documents.forEach((record, index) => {
-                const pid = record.pid;
-                const title = getDisplayValue(
-                    record["root.title"],
-                    "Dokument bez uvedeného názvu"
+        function toArray(value) {
+            if (Array.isArray(value)) {
+                return value.filter(
+                    (item) => item !== null && item !== undefined
                 );
-                const year = getDisplayValue(
-                    record.datum_str,
-                    "neuveden"
-                );
+            }
 
-                const section = documentElement("section", "result");
-                section.setAttribute(
-                    "aria-labelledby",
-                    `result-title-${index}`
-                );
+            if (value === null || value === undefined) {
+                return [];
+            }
 
-                const heading = documentElement("h2");
-                heading.id = `result-title-${index}`;
-                heading.textContent = title;
+            return [value];
+        }
 
-                const metadata = documentElement("dl", "metadata");
-
-                appendMetadata(metadata, "Rok vydání", year);
-
-                const uuidCode = document.createElement("code");
-                uuidCode.textContent = pid;
-                appendMetadata(metadata, "UUID", uuidCode);
-
-                const handleCode = document.createElement("code");
-                handleCode.textContent = normalizedHandle;
-                appendMetadata(metadata, "Handle", handleCode);
-
-                const actions = documentElement("div", "actions");
-
-                const documentLink = documentElement("a", "button");
-                documentLink.href = DOCUMENT_URL + encodeURIComponent(pid);
-                documentLink.target = "_blank";
-                documentLink.rel = "noopener noreferrer";
-                documentLink.textContent = "Otevřít v NDK";
-
-                const copyUuidButton = documentElement("button", "copy-button");
-                copyUuidButton.type = "button";
-                copyUuidButton.textContent = "Kopírovat UUID";
-                copyUuidButton.addEventListener("click", () => {
-                    copyText(pid, copyUuidButton);
-                });
-
-                const copyHandleButton = documentElement("button", "copy-button");
-                copyHandleButton.type = "button";
-                copyHandleButton.textContent = "Kopírovat Handle";
-                copyHandleButton.addEventListener("click", () => {
-                    copyText(normalizedHandle, copyHandleButton);
-                });
-
-                actions.append(
-                    documentLink,
-                    copyUuidButton,
-                    copyHandleButton
-                );
-
-                section.append(heading, metadata, actions);
-                resultsBox.appendChild(section);
-            });
+        function firstValue(value) {
+            return toArray(value)
+                .map((item) => String(item).trim())
+                .find(Boolean) || "";
         }
 
         function appendMetadata(container, label, value) {
@@ -498,26 +596,7 @@
             container.append(term, description);
         }
 
-        function getDisplayValue(value, fallback) {
-            if (Array.isArray(value)) {
-                const nonEmptyValues = value
-                    .map(item => String(item).trim())
-                    .filter(Boolean);
-
-                return nonEmptyValues.length
-                    ? nonEmptyValues.join(", ")
-                    : fallback;
-            }
-
-            if (value === null || value === undefined) {
-                return fallback;
-            }
-
-            const text = String(value).trim();
-            return text || fallback;
-        }
-
-        async function copyText(text, button) {
+        async function copyToClipboard(text, button) {
             const originalText = button.textContent;
 
             try {
@@ -560,10 +639,10 @@
         function clearOutput() {
             statusBox.textContent = "";
             statusBox.className = "";
-            resultsBox.replaceChildren();
+            resultBox.replaceChildren();
         }
 
-        function documentElement(tagName, className = "") {
+        function createElement(tagName, className = "") {
             const element = document.createElement(tagName);
 
             if (className) {
