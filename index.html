@@ -385,11 +385,12 @@
             } catch (error) {
                 console.error(error);
 
-                showStatus(
-                    "Nepodařilo se spojit s API Krameria. " +
-                    "Příčinou může být dočasná nedostupnost služby nebo blokování požadavku prohlížečem (CORS).",
-                    "error"
-                );
+                const message =
+                    error instanceof TypeError
+                        ? "Prohlížeč nemohl načíst odpověď API. Může jít o blokování CORS nebo síťovou chybu."
+                        : `Vyhledávání selhalo: ${error.message}`;
+
+                showStatus(message, "error");
             } finally {
                 setLoading(false);
             }
@@ -416,14 +417,14 @@
         function renderResults(documents, normalizedHandle) {
             resultsBox.replaceChildren();
 
-            documents.forEach((document, index) => {
-                const pid = document.pid;
+            documents.forEach((record, index) => {
+                const pid = record.pid;
                 const title = getDisplayValue(
-                    document["root.title"],
+                    record["root.title"],
                     "Dokument bez uvedeného názvu"
                 );
                 const year = getDisplayValue(
-                    document.datum_str,
+                    record.datum_str,
                     "neuveden"
                 );
 
