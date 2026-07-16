@@ -147,19 +147,26 @@
         }
 
         .metadata {
-            display: grid;
-            grid-template-columns: 170px minmax(0, 1fr);
-            gap: 10px 16px;
             margin: 0 0 22px;
         }
 
-        .metadata dt {
+        .metadata-row {
+            margin: 0 0 10px;
+            overflow-wrap: anywhere;
+        }
+
+        .metadata-label {
             font-weight: 700;
         }
 
-        .metadata dd {
-            margin: 0;
-            overflow-wrap: anywhere;
+        .metadata-value {
+            margin-left: 4px;
+        }
+
+        .metadata-row-uuid {
+            white-space: nowrap;
+            overflow-x: auto;
+            padding-bottom: 2px;
         }
 
         code {
@@ -207,6 +214,38 @@
             background: #dfe9f8;
         }
 
+
+        .result-layout {
+            display: grid;
+            grid-template-columns: minmax(140px, 190px) minmax(0, 1fr);
+            gap: 24px;
+            align-items: start;
+        }
+
+        .thumbnail-wrap {
+            display: flex;
+            justify-content: center;
+        }
+
+        .thumbnail {
+            display: block;
+            width: 100%;
+            max-width: 190px;
+            height: auto;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: #fff;
+        }
+
+        .result-content {
+            min-width: 0;
+        }
+
+        .result-layout > .actions {
+            grid-column: 1 / -1;
+            margin-top: 2px;
+        }
+
         footer {
             margin-top: 18px;
             color: var(--muted);
@@ -224,14 +263,18 @@
                 padding: 22px 18px;
             }
 
-            .metadata {
+            .result-layout {
                 grid-template-columns: 1fr;
-                gap: 4px;
             }
 
-            .metadata dd {
-                margin-bottom: 10px;
+            .thumbnail-wrap {
+                justify-content: flex-start;
             }
+
+            .thumbnail {
+                max-width: 180px;
+            }
+
 
             .actions {
                 flex-direction: column;
@@ -296,6 +339,12 @@
         const DOCUMENT_URL =
             "https://www.ndk.cz/uuid/";
 
+        const KRAMERIUS3_HANDLE_URL =
+            "http://kramerius.nkp.cz/kramerius/handle/";
+
+        const THUMBNAIL_BASE_URL =
+            "https://api.kramerius7.nkp.cz/search/api/client/v7.0/items/";
+
         const MODEL_LABELS = {
             monograph: "Monografie",
             periodical: "Periodikum",
@@ -334,10 +383,7 @@
                 const records = await searchHandle(handle);
 
                 if (records.length === 0) {
-                    showStatus(
-                        "Pro zadaný Handle nebyl nalezen žádný dokument.",
-                        "error"
-                    );
+                    showNotFound(handle);
                     return;
                 }
 
@@ -435,6 +481,25 @@
                 })[0] ?? null;
         }
 
+        function showNotFound(handle) {
+            showStatus(
+                "Pro zadaný Handle nebyl v Národní digitální knihovně nalezen žádný dokument.",
+                "error"
+            );
+
+            const actions = createElement("div", "actions");
+            actions.style.marginTop = "16px";
+
+            const oldLink = createElement("a", "button");
+            oldLink.href = KRAMERIUS3_HANDLE_URL + handle;
+            oldLink.target = "_blank";
+            oldLink.rel = "noopener noreferrer";
+            oldLink.textContent = "Otevřít dokument v K3";
+
+            actions.appendChild(oldLink);
+            resultBox.appendChild(actions);
+        }
+
         function renderResult(record, handle) {
             resultBox.replaceChildren();
 
@@ -447,10 +512,28 @@
             const documentType = getDocumentType(model, rootModel);
 
             const card = createElement("section", "result-card");
+            const layout = createElement("div", "result-layout");
+            const thumbnailWrap = createElement("div", "thumbnail-wrap");
+            const content = createElement("div", "result-content");
+
+            const thumbnail = document.createElement("img");
+            thumbnail.className = "thumbnail";
+            thumbnail.src =
+                THUMBNAIL_BASE_URL +
+                encodeURIComponent(pid) +
+                "/image/thumb";
+            thumbnail.alt = `Náhled dokumentu: ${title}`;
+            thumbnail.loading = "lazy";
+            thumbnail.addEventListener("error", () => {
+                thumbnailWrap.remove();
+            });
+
+            thumbnailWrap.appendChild(thumbnail);
+
             const heading = document.createElement("h2");
             heading.textContent = title;
 
-            const metadata = createElement("dl", "metadata");
+            const metadata = createElement("div", "metadata");
 
             appendMetadata(metadata, "Typ dokumentu", documentType);
 
@@ -473,7 +556,7 @@
             const actions = createElement("div", "actions");
 
             const documentLink = createElement("a", "button");
-            documentLink.href = DOCUMENT_URL + encodeURIComponent(pid);
+            documentLink.href = DOCUMENT_URL + pid;
             documentLink.target = "_blank";
             documentLink.rel = "noopener noreferrer";
             documentLink.textContent = "Otevřít dokument v NDK";
@@ -498,7 +581,9 @@
                 copyHandleButton
             );
 
-            card.append(heading, metadata, actions);
+            content.append(heading, metadata);
+            layout.append(thumbnailWrap, content, actions);
+            card.appendChild(layout);
             resultBox.appendChild(card);
         }
 
@@ -582,18 +667,25 @@
         }
 
         function appendMetadata(container, label, value) {
-            const term = document.createElement("dt");
-            term.textContent = label;
+            const row = createElement("p", "metadata-row");
 
-            const description = document.createElement("dd");
-
-            if (value instanceof Node) {
-                description.appendChild(value);
-            } else {
-                description.textContent = value;
+            if (label === "UUID") {
+                row.classList.add("metadata-row-uuid");
             }
 
-            container.append(term, description);
+            const labelElement = createElement("span", "metadata-label");
+            labelElement.textContent = `${label}:`;
+
+            const valueElement = createElement("span", "metadata-value");
+
+            if (value instanceof Node) {
+                valueElement.appendChild(value);
+            } else {
+                valueElement.textContent = value;
+            }
+
+            row.append(labelElement, valueElement);
+            container.appendChild(row);
         }
 
         async function copyToClipboard(text, button) {
