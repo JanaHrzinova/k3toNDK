@@ -35,17 +35,89 @@
         }
 
         main {
-            width: min(820px, calc(100% - 32px));
+            width: min(1180px, calc(100% - 32px));
             margin: 0 auto;
             padding: 48px 0;
         }
 
+        
         .panel {
-            padding: 32px;
+            padding: 30px;
             background: var(--surface);
             border: 1px solid var(--border);
             border-radius: 14px;
             box-shadow: var(--shadow);
+            overflow: hidden;
+        }
+
+
+
+        .top-nav {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            margin: -32px -32px 30px;
+            border-bottom: 1px solid var(--border);
+            background: #fff;
+            border-radius: 14px 14px 0 0;
+            overflow: hidden;
+        }
+
+        .top-nav a {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            min-height: 58px;
+            padding: 14px 18px;
+            color: var(--text);
+            font-weight: 700;
+            text-decoration: none;
+        }
+
+        .top-nav a:hover {
+            background: #f7f9fb;
+            color: var(--primary);
+        }
+
+        .top-nav a[aria-current="page"] {
+            color: var(--primary);
+        }
+
+        .top-nav a[aria-current="page"]::after {
+            content: "";
+            position: absolute;
+            left: 18%;
+            right: 18%;
+            bottom: 0;
+            height: 3px;
+            border-radius: 3px 3px 0 0;
+            background: var(--primary);
+        }
+
+        .top-nav .nav-icon {
+            font-size: 1rem;
+            line-height: 1;
+        }
+
+
+        h1 {
+            display: flex;
+            align-items: center;
+            gap: 0.35em;
+            flex-wrap: wrap;
+        }
+
+        .title-arrow {
+            display: inline-flex;
+            align-items: center;
+            color: currentColor;
+        }
+
+        .title-arrow svg {
+            width: 0.9em;
+            height: 0.9em;
+            display: block;
         }
 
         h1 {
@@ -246,6 +318,50 @@
             margin-top: 2px;
         }
 
+
+        .help-box {
+            margin: 24px 0;
+            padding: 12px 16px;
+            border: 1px solid #d9dde3;
+            border-radius: 8px;
+            background: #ffffff;
+        }
+
+        .help-box summary {
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #555b63;
+            user-select: none;
+        }
+
+        .help-box[open] summary {
+            margin-bottom: 10px;
+        }
+
+        .help-box p {
+            color: #555b63;
+            font-size: 0.95rem;
+        }
+
+        .help-box p:last-child {
+            margin-bottom: 0;
+        }
+
+
+        .help-box h3 {
+            margin: 18px 0 8px;
+            font-size: 1rem;
+            color: #444;
+        }
+
+        .help-box code {
+            font-family: Consolas, "Courier New", monospace;
+            background: #f5f5f5;
+            padding: 1px 4px;
+            border-radius: 4px;
+        }
+
         footer {
             margin-top: 18px;
             color: var(--muted);
@@ -255,12 +371,26 @@
 
         @media (max-width: 600px) {
             main {
-                width: min(100% - 20px, 820px);
+                width: min(100% - 20px, 1180px);
                 padding: 20px 0;
             }
 
             .panel {
                 padding: 22px 18px;
+            }
+
+            .top-nav {
+                margin: -22px -18px 24px;
+            }
+
+            .top-nav a {
+                min-height: 54px;
+                padding: 12px 8px;
+                font-size: 0.92rem;
+            }
+
+            .top-nav .nav-icon {
+                display: none;
             }
 
             .result-layout {
@@ -291,12 +421,92 @@
 <body>
     <main>
         <section class="panel" aria-labelledby="page-title">
-            <h1 id="page-title">Vyhledání dokumentu podle Handle</h1>
+
+            <nav class="top-nav" aria-label="Typ vyhledávání">
+                <a href="index.html" aria-current="page">
+                    <span class="nav-icon" aria-hidden="true">⌕</span>
+                    Jednotlivé vyhledávání
+                </a>
+                <a href="hromadne.html">
+                    <span class="nav-icon" aria-hidden="true">▦</span>
+                    Hromadné vyhledávání
+                </a>
+            </nav>
+            <h1>
+    <span>Kramerius 3</span>
+    <span class="title-arrow" aria-hidden="true">
+        <svg viewBox="0 0 24 24" focusable="false">
+            <path d="M5 12h12M13 6l6 6-6 6"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2.6"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"/>
+        </svg>
+    </span>
+    <span>NDK</span>
+</h1>
 
             <p class="intro">
-                Zadejte identifikátor Handle nebo celý trvalý odkaz dokumentu.
-                Aplikace vyhledá odpovídající dokument a zobrazí základní informace o něm.
+                Zadejte identifikátor Handle nebo celý trvalý odkaz dokumentu z K3.
+                Aplikace vyhledá odpovídající dokument v NDK a zobrazí základní informace o něm.
             </p>
+
+            
+            <details class="help-box">
+                <summary>O aplikaci</summary>
+
+                <p>
+                    Aplikace slouží k vyhledávání a převodu odkazů ze starší verze
+                    digitální knihovny Kramerius 3 (K3) do novější verze Národní
+                    digitální knihovny (NDK). Pracuje s identifikátory Handle
+                    a persistentními odkazy.
+                </p>
+
+                <h3>Použití</h3>
+
+                <p>
+                    Aplikace umožňuje vyhledávat dokumenty jednotlivě i hromadně.
+                    Do vyhledávacího pole vložte identifikátor Handle nebo persistentní
+                    odkaz do K3 (např.
+                    <code>ABA001/12370785</code>,
+                    <code>handle:ABA001/12370785</code> nebo
+                    <code>http://kramerius.nkp.cz/kramerius/handle/ABA001/12370785</code>)
+                    a aplikace vyhledá odpovídající dokument v NDK.
+                    Pokud dokument v NDK nenajde, nabídne přímý odkaz na jeho otevření
+                    v Krameriu 3.
+                </p>
+
+                <p>
+                    V režimu <strong>Hromadné vyhledávání</strong> je možné vložit více
+                    identifikátorů Handle najednou a výsledky následně stáhnout
+                    ve formátu CSV.
+                </p>
+
+                <h3>Další informace</h3>
+
+                <p>
+                    Již delší dobu probíhá migrace obsahu z K3 do NDK. V první fázi migrace byla převedena většina
+                    monografií a menší část periodik.
+                    V K3 jsou identifikátory Handle přiděleny na všech úrovních
+                    dokumentů (titul, stránka, ročník periodika i číslo periodika).
+                    Při dřívější migraci do NDK však byly zachovány pouze u titulů
+                    monografií a ročníků periodik.
+                    Pokud tedy aplikace podle zadaného identifikátoru Handle dokument
+                    v NDK nenajde, nemusí to znamenat, že dokument dosud nebyl převeden.
+                    Je možné, že zadaný persistentní odkaz směřuje na úroveň dokumentu,
+                    u které identifikátor Handle zatím v NDK není uložen.
+                </p>
+
+                <p>
+                    V současnosti (stav k červenci 2026) se začínají metadata dříve migrovaných dokumentů průběžně
+                    doplňovat tak, aby byly identifikátory Handle zachovány na všech
+                    úrovních dokumentů. Současně probíhá převod dalších dokumentů
+                    z K3 do NDK.
+                </p>
+            </details>
+
+
 
             <form id="search-form">
                 <label for="handle-input">Handle dokumentu</label>
@@ -326,7 +536,7 @@
         </section>
 
         <footer>
-            Data jsou načítána z veřejného API Kramerius 7.
+            Jana Hrzinová 2026. Vyrobeno za pomoci ChatGPT 5.5
         </footer>
     </main>
 

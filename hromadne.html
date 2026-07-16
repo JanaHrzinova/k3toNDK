@@ -1,0 +1,934 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Hromadný převod odkazů z Krameria 3 na UUID a odkazy do Národní digitální knihovny.">
+    <title>Hromadný převod Handle na UUID</title>
+
+    <style>
+        :root {
+            --background: #f5f7fa;
+            --surface: #ffffff;
+            --text: #202124;
+            --muted: #5f6368;
+            --border: #d7dce2;
+            --primary: #185abc;
+            --primary-hover: #124a9c;
+            --secondary: #eef3fb;
+            --error: #a50e0e;
+            --success: #137333;
+            --warning: #8a5a00;
+            --shadow: 0 8px 24px rgba(32, 33, 36, 0.08);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background: var(--background);
+            color: var(--text);
+            font-family: Arial, Helvetica, sans-serif;
+            line-height: 1.5;
+        }
+
+        main {
+            width: min(1180px, calc(100% - 32px));
+            margin: 0 auto;
+            padding: 40px 0;
+        }
+
+        
+        .panel {
+            padding: 30px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            box-shadow: var(--shadow);
+            overflow: hidden;
+        }
+
+
+
+        .top-nav {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            margin: -32px -32px 30px;
+            border-bottom: 1px solid var(--border);
+            background: #fff;
+            border-radius: 14px 14px 0 0;
+            overflow: hidden;
+        }
+
+        .top-nav a {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            min-height: 58px;
+            padding: 14px 18px;
+            color: var(--text);
+            font-weight: 700;
+            text-decoration: none;
+        }
+
+        .top-nav a:hover {
+            background: #f7f9fb;
+            color: var(--primary);
+        }
+
+        .top-nav a[aria-current="page"] {
+            color: var(--primary);
+        }
+
+        .top-nav a[aria-current="page"]::after {
+            content: "";
+            position: absolute;
+            left: 18%;
+            right: 18%;
+            bottom: 0;
+            height: 3px;
+            border-radius: 3px 3px 0 0;
+            background: var(--primary);
+        }
+
+        .top-nav .nav-icon {
+            font-size: 1rem;
+            line-height: 1;
+        }
+
+        h1 {
+            margin: 0 0 12px;
+            font-size: clamp(1.8rem, 4vw, 2.5rem);
+            line-height: 1.15;
+        }
+
+        .intro {
+            margin: 0 0 24px;
+            color: var(--muted);
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 700;
+        }
+
+        textarea,
+        button,
+        a.button {
+            font: inherit;
+        }
+
+        textarea {
+            width: 100%;
+            min-height: 220px;
+            padding: 14px;
+            border: 1px solid #7a8088;
+            border-radius: 8px;
+            background: #fff;
+            color: var(--text);
+            resize: vertical;
+        }
+
+        textarea:focus {
+            outline: 3px solid rgba(24, 90, 188, 0.24);
+            border-color: var(--primary);
+        }
+
+        .hint {
+            margin: 8px 0 0;
+            color: var(--muted);
+            font-size: 0.92rem;
+        }
+
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 16px;
+        }
+
+        button,
+        .button {
+            min-height: 44px;
+            padding: 10px 16px;
+            border-radius: 8px;
+            font-weight: 700;
+            cursor: pointer;
+            text-decoration: none;
+        }
+
+        .primary-button {
+            border: 1px solid var(--primary);
+            background: var(--primary);
+            color: #fff;
+        }
+
+        .primary-button:hover {
+            background: var(--primary-hover);
+            border-color: var(--primary-hover);
+        }
+
+        .secondary-button {
+            border: 1px solid var(--primary);
+            background: var(--secondary);
+            color: var(--primary-hover);
+        }
+
+        .secondary-button:hover {
+            background: #dfe9f8;
+        }
+
+        button:disabled {
+            cursor: wait;
+            opacity: 0.65;
+        }
+
+        #status {
+            min-height: 24px;
+            margin-top: 18px;
+            font-weight: 700;
+        }
+
+        .status-error {
+            color: var(--error);
+        }
+
+        .status-success {
+            color: var(--success);
+        }
+
+        .status-warning {
+            color: var(--warning);
+        }
+
+        .progress-wrap {
+            display: none;
+            margin-top: 12px;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 12px;
+            overflow: hidden;
+            border-radius: 999px;
+            background: #e8ecef;
+        }
+
+        .progress-fill {
+            width: 0;
+            height: 100%;
+            background: var(--primary);
+            transition: width 0.2s ease;
+        }
+
+        .results {
+            margin-top: 28px;
+        }
+
+        .results-header {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .results-header h2 {
+            margin: 0;
+            font-size: 1.4rem;
+        }
+
+        .table-wrap {
+            overflow-x: auto;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 900px;
+            background: #fff;
+        }
+
+        th,
+        td {
+            padding: 10px 12px;
+            border-bottom: 1px solid var(--border);
+            text-align: left;
+            vertical-align: top;
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 0.88rem;
+        }
+
+        th {
+            background: #f7f9fb;
+            font-size: 0.84rem;
+            font-weight: 700;
+        }
+
+        tr:last-child td {
+            border-bottom: 0;
+        }
+
+        code {
+            font-family: Consolas, "Courier New", monospace;
+            font-size: inherit;
+            white-space: nowrap;
+        }
+
+        .status-cell-found {
+            color: var(--success);
+            font-weight: 700;
+        }
+
+        .status-cell-missing {
+            color: var(--error);
+            font-weight: 700;
+        }
+
+        .table-link {
+            color: var(--primary-hover);
+            font-weight: 700;
+            text-decoration: none;
+        }
+
+        .table-link:hover {
+            text-decoration: underline;
+        }
+
+        .empty-state {
+            margin-top: 20px;
+            color: var(--muted);
+        }
+
+        footer {
+            margin-top: 18px;
+            color: var(--muted);
+            font-size: 0.9rem;
+            text-align: center;
+        }
+
+        @media (max-width: 700px) {
+            main {
+                width: min(100% - 20px, 1180px);
+                padding: 20px 0;
+            }
+
+            .panel {
+                padding: 22px 18px;
+            }
+
+            .top-nav {
+                margin: -22px -18px 24px;
+            }
+
+            .top-nav a {
+                min-height: 54px;
+                padding: 12px 8px;
+                font-size: 0.92rem;
+            }
+
+            .top-nav .nav-icon {
+                display: none;
+            }
+
+            .controls {
+                flex-direction: column;
+            }
+
+            .controls button {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <main>
+        <section class="panel" aria-labelledby="page-title">
+
+            <nav class="top-nav" aria-label="Typ vyhledávání">
+                <a href="index.html">
+                    <span class="nav-icon" aria-hidden="true">⌕</span>
+                    Jednotlivé vyhledávání
+                </a>
+                <a href="hromadne.html" aria-current="page">
+                    <span class="nav-icon" aria-hidden="true">▦</span>
+                    Hromadné vyhledávání
+                </a>
+            </nav>
+            <h1 id="page-title">Hromadný převod Handle na UUID</h1>
+
+            <p class="intro">
+                Vložte seznam odkazů z Krameria 3 nebo identifikátorů Handle.
+                Každou hodnotu zadejte na samostatný řádek.
+            </p>
+
+            <form id="bulk-form">
+                <label for="handles-input">Odkazy nebo Handle</label>
+
+                <textarea
+                    id="handles-input"
+                    placeholder="http://kramerius.nkp.cz/kramerius/handle/ABA001/12539252&#10;ABA001/11859152&#10;handle:ABA001/1457007"
+                    spellcheck="false"
+                    required
+                ></textarea>
+
+                <p class="hint">
+                    Prázdné řádky a duplicitní hodnoty budou automaticky odstraněny.
+                </p>
+
+                <div class="controls">
+                    <button id="search-button" class="primary-button" type="submit">
+                        Zpracovat seznam
+                    </button>
+
+                    <button id="clear-button" class="secondary-button" type="button">
+                        Vymazat
+                    </button>
+
+                    <button id="copy-button" class="secondary-button" type="button" disabled>
+                        Kopírovat všechna UUID
+                    </button>
+
+                    <button id="csv-button" class="secondary-button" type="button" disabled>
+                        Stáhnout CSV
+                    </button>
+                </div>
+            </form>
+
+            <div id="status" role="status" aria-live="polite"></div>
+
+            <div id="progress-wrap" class="progress-wrap" aria-hidden="true">
+                <div class="progress-bar">
+                    <div id="progress-fill" class="progress-fill"></div>
+                </div>
+            </div>
+
+            <section id="results" class="results" hidden>
+                <div class="results-header">
+                    <h2>Výsledky</h2>
+                    <span id="results-summary"></span>
+                </div>
+
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Stav</th>
+                                <th>Handle</th>
+                                <th>UUID</th>
+                                <th>Název</th>
+                                <th>Typ dokumentu</th>
+                                <th>Rok</th>
+                                <th>Odkaz</th>
+                            </tr>
+                        </thead>
+                        <tbody id="results-body"></tbody>
+                    </table>
+                </div>
+            </section>
+        </section>
+
+        <footer>
+            Jana Hrzinová 2026. Vyrobeno za pomoci ChatGPT 5.5
+        </footer>
+    </main>
+
+    <script>
+        "use strict";
+
+        const API_URL =
+            "https://api.kramerius7.nkp.cz/search/api/client/v7.0/search";
+
+        const NDK_URL =
+            "https://www.ndk.cz/uuid/";
+
+        const KRAMERIUS3_URL =
+            "http://kramerius.nkp.cz/kramerius/handle/";
+
+        const REQUEST_DELAY_MS = 250;
+
+        const MODEL_LABELS = {
+            monograph: "Monografie",
+            periodical: "Periodikum",
+            periodicalvolume: "Ročník periodika",
+            periodicalitem: "Číslo periodika",
+            page: "Stránka",
+            article: "Článek",
+            map: "Mapa",
+            graphic: "Grafika",
+            sheetmusic: "Notový tisk",
+            manuscript: "Rukopis",
+            soundrecording: "Zvukový dokument"
+        };
+
+        const form = document.getElementById("bulk-form");
+        const input = document.getElementById("handles-input");
+        const searchButton = document.getElementById("search-button");
+        const clearButton = document.getElementById("clear-button");
+        const copyButton = document.getElementById("copy-button");
+        const csvButton = document.getElementById("csv-button");
+        const statusBox = document.getElementById("status");
+        const progressWrap = document.getElementById("progress-wrap");
+        const progressFill = document.getElementById("progress-fill");
+        const resultsSection = document.getElementById("results");
+        const resultsBody = document.getElementById("results-body");
+        const resultsSummary = document.getElementById("results-summary");
+
+        let currentResults = [];
+
+        form.addEventListener("submit", async (event) => {
+            event.preventDefault();
+
+            const handles = parseHandles(input.value);
+
+            if (handles.length === 0) {
+                showStatus("Vložte alespoň jeden odkaz nebo Handle.", "error");
+                return;
+            }
+
+            setProcessing(true);
+            clearResults();
+            currentResults = [];
+
+            progressWrap.style.display = "block";
+            progressWrap.setAttribute("aria-hidden", "false");
+
+            for (let index = 0; index < handles.length; index++) {
+                const handle = handles[index];
+
+                showStatus(
+                    `Zpracovávám ${index + 1} z ${handles.length}: ${handle}`
+                );
+
+                try {
+                    const result = await resolveHandle(handle);
+                    currentResults.push(result);
+                    appendResultRow(result);
+                } catch (error) {
+                    console.error(error);
+
+                    const result = {
+                        handle,
+                        pid: "",
+                        type: "",
+                        year: "",
+                        status: "Chyba",
+                        found: false,
+                        error: error.message
+                    };
+
+                    currentResults.push(result);
+                    appendResultRow(result);
+                }
+
+                updateProgress(index + 1, handles.length);
+
+                if (index < handles.length - 1) {
+                    await wait(REQUEST_DELAY_MS);
+                }
+            }
+
+            const foundCount = currentResults.filter(item => item.found).length;
+            const missingCount = currentResults.length - foundCount;
+
+            resultsSection.hidden = false;
+            resultsSummary.textContent =
+                `Nalezeno: ${foundCount} · Nenalezeno nebo chyba: ${missingCount}`;
+
+            copyButton.disabled = foundCount === 0;
+            csvButton.disabled = currentResults.length === 0;
+
+            showStatus(
+                `Zpracování dokončeno. Nalezeno ${foundCount} z ${currentResults.length} dokumentů.`,
+                foundCount === currentResults.length ? "success" : "warning"
+            );
+
+            setProcessing(false);
+        });
+
+        clearButton.addEventListener("click", () => {
+            input.value = "";
+            currentResults = [];
+            clearResults();
+            showStatus("");
+            input.focus();
+        });
+
+        copyButton.addEventListener("click", async () => {
+            const uuids = currentResults
+                .filter(item => item.found && item.pid)
+                .map(item => item.pid)
+                .join("\n");
+
+            if (!uuids) {
+                return;
+            }
+
+            try {
+                await navigator.clipboard.writeText(uuids);
+                showStatus("Všechna nalezená UUID byla zkopírována.", "success");
+            } catch (error) {
+                console.error(error);
+                showStatus("UUID se nepodařilo zkopírovat.", "error");
+            }
+        });
+
+        csvButton.addEventListener("click", () => {
+            if (currentResults.length === 0) {
+                return;
+            }
+
+            const rows = [
+                ["stav", "handle", "uuid", "nazev", "typ_dokumentu", "rok", "odkaz"]
+            ];
+
+            currentResults.forEach((item) => {
+                rows.push([
+                    item.status,
+                    item.handle,
+                    item.pid,
+                    item.title,
+                    item.type,
+                    item.year,
+                    item.found
+                        ? NDK_URL + item.pid
+                        : KRAMERIUS3_URL + item.handle
+                ]);
+            });
+
+            const csv = rows
+                .map(row => row.map(csvEscape).join(";"))
+                .join("\r\n");
+
+            const blob = new Blob(
+                ["\uFEFF" + csv],
+                { type: "text/csv;charset=utf-8" }
+            );
+
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.href = url;
+            link.download = "prevod-handle-uuid.csv";
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            URL.revokeObjectURL(url);
+        });
+
+        async function resolveHandle(handle) {
+            const records = await searchHandle(handle);
+
+            if (records.length === 0) {
+                return {
+                    handle,
+                    pid: "",
+                    title: "",
+                    type: "",
+                    year: "",
+                    status: "Nenalezeno v NDK",
+                    found: false,
+                    error: ""
+                };
+            }
+
+            const record = selectBestResult(records, handle);
+
+            if (!record) {
+                return {
+                    handle,
+                    pid: "",
+                    title: "",
+                    type: "",
+                    year: "",
+                    status: "Nelze určit výsledek",
+                    found: false,
+                    error: ""
+                };
+            }
+
+            const pid = firstValue(record.pid);
+            const model = firstValue(record.model);
+            const rootModel = firstValue(record["root.model"]);
+
+            const title = (model === "page" || model === "periodicalvolume" || model === "periodicalitem")
+                ? (firstValue(record["root.title"]) || firstValue(record["title.search"]))
+                : (firstValue(record["title.search"]) || firstValue(record["root.title"]));
+
+            return {
+                handle,
+                pid,
+                title,
+                type: getDocumentType(model, rootModel),
+                year: firstValue(record["date.str"]),
+                status: "Nalezeno",
+                found: true,
+                error: ""
+            };
+        }
+
+        async function searchHandle(handle) {
+            const query = `id_other:"handle:${escapeSolrValue(handle)}"`;
+
+            const parameters = new URLSearchParams({
+                q: query,
+                fl: [
+                    "pid",
+                    "date.str",
+                    "root.model",
+                    "model",
+                    "title.search",
+                    "root.title",
+                    "id_other"
+                ].join(","),
+                rows: "1000",
+                start: "0",
+                wt: "json"
+            });
+
+            const response = await fetch(
+                `${API_URL}?${parameters.toString()}`,
+                {
+                    headers: {
+                        "Accept": "application/json"
+                    }
+                }
+            );
+
+            if (!response.ok) {
+                throw new Error(`API vrátilo HTTP ${response.status}.`);
+            }
+
+            const data = await response.json();
+            return data?.response?.docs ?? [];
+        }
+
+        function selectBestResult(records, handle) {
+            const exactHandle = `handle:${handle}`.toLowerCase();
+
+            const exactMatches = records.filter((record) =>
+                toArray(record.id_other)
+                    .map(value => String(value).toLowerCase())
+                    .includes(exactHandle)
+            );
+
+            const candidates = exactMatches.length > 0
+                ? exactMatches
+                : records;
+
+            const priority = {
+                monograph: 100,
+                periodicalvolume: 95,
+                periodical: 90,
+                periodicalitem: 85,
+                article: 80,
+                page: 70
+            };
+
+            return [...candidates]
+                .filter(record => firstValue(record.pid))
+                .sort((a, b) => {
+                    const scoreA = priority[firstValue(a.model)] ?? 10;
+                    const scoreB = priority[firstValue(b.model)] ?? 10;
+                    return scoreB - scoreA;
+                })[0] ?? null;
+        }
+
+        function appendResultRow(result) {
+            const row = document.createElement("tr");
+
+            const handleCell = document.createElement("td");
+            const handleCode = document.createElement("code");
+            handleCode.textContent = result.handle;
+            handleCell.appendChild(handleCode);
+
+            const uuidCell = document.createElement("td");
+
+            if (result.pid) {
+                const uuidCode = document.createElement("code");
+                uuidCode.textContent = result.pid;
+                uuidCell.appendChild(uuidCode);
+            } else {
+                uuidCell.textContent = "—";
+            }
+
+            const titleCell = document.createElement("td");
+            titleCell.textContent = result.title || "—";
+
+            const typeCell = document.createElement("td");
+            typeCell.textContent = result.type || "—";
+
+            const yearCell = document.createElement("td");
+            yearCell.textContent = result.year || "—";
+
+            const statusCell = document.createElement("td");
+            statusCell.textContent = result.error
+                ? `${result.status}: ${result.error}`
+                : result.status;
+            statusCell.className = result.found
+                ? "status-cell-found"
+                : "status-cell-missing";
+
+            const linkCell = document.createElement("td");
+            const link = document.createElement("a");
+            link.className = "table-link";
+            link.target = "_blank";
+            link.rel = "noopener noreferrer";
+
+            if (result.found) {
+                link.href = NDK_URL + result.pid;
+                link.textContent = "Otevřít v NDK";
+            } else {
+                link.href = KRAMERIUS3_URL + result.handle;
+                link.textContent = "Otevřít v K3";
+            }
+
+            linkCell.appendChild(link);
+
+            row.append(
+                statusCell,
+                handleCell,
+                uuidCell,
+                titleCell,
+                typeCell,
+                yearCell,
+                linkCell
+            );
+
+            resultsBody.appendChild(row);
+            resultsSection.hidden = false;
+        }
+
+        function parseHandles(value) {
+            const normalized = value
+                .split(/\r?\n/)
+                .map(normalizeHandle)
+                .filter(Boolean);
+
+            return [...new Set(normalized)];
+        }
+
+        function normalizeHandle(value) {
+            return value
+                .trim()
+                .replace(
+                    /^https?:\/\/kramerius\.nkp\.cz\/kramerius\/handle\//i,
+                    ""
+                )
+                .replace(/^handle:/i, "")
+                .replace(/^\/+|\/+$/g, "")
+                .trim();
+        }
+
+        function getDocumentType(model, rootModel) {
+            if (model === "page" && rootModel === "monograph") {
+                return "Stránka monografie";
+            }
+
+            if (model === "page" && rootModel === "periodical") {
+                return "Stránka periodika";
+            }
+
+            return MODEL_LABELS[model] || model || "Neurčený typ";
+        }
+
+        function escapeSolrValue(value) {
+            return value
+                .replace(/\\/g, "\\\\")
+                .replace(/"/g, '\\"');
+        }
+
+        function toArray(value) {
+            if (Array.isArray(value)) {
+                return value.filter(
+                    item => item !== null && item !== undefined
+                );
+            }
+
+            if (value === null || value === undefined) {
+                return [];
+            }
+
+            return [value];
+        }
+
+        function firstValue(value) {
+            return toArray(value)
+                .map(item => String(item).trim())
+                .find(Boolean) || "";
+        }
+
+        function updateProgress(done, total) {
+            const percent = Math.round((done / total) * 100);
+            progressFill.style.width = `${percent}%`;
+        }
+
+        function setProcessing(isProcessing) {
+            searchButton.disabled = isProcessing;
+            clearButton.disabled = isProcessing;
+            input.disabled = isProcessing;
+
+            searchButton.textContent = isProcessing
+                ? "Zpracovávám…"
+                : "Zpracovat seznam";
+        }
+
+        function clearResults() {
+            resultsBody.replaceChildren();
+            resultsSection.hidden = true;
+            resultsSummary.textContent = "";
+            progressFill.style.width = "0";
+            progressWrap.style.display = "none";
+            progressWrap.setAttribute("aria-hidden", "true");
+            copyButton.disabled = true;
+            csvButton.disabled = true;
+        }
+
+        function showStatus(message, type = "") {
+            statusBox.textContent = message;
+            statusBox.className = "";
+
+            if (type === "error") {
+                statusBox.classList.add("status-error");
+            }
+
+            if (type === "success") {
+                statusBox.classList.add("status-success");
+            }
+
+            if (type === "warning") {
+                statusBox.classList.add("status-warning");
+            }
+        }
+
+        function csvEscape(value) {
+            const text = String(value ?? "");
+
+            if (
+                text.includes(";") ||
+                text.includes('"') ||
+                text.includes("\n")
+            ) {
+                return `"${text.replace(/"/g, '""')}"`;
+            }
+
+            return text;
+        }
+
+        function wait(milliseconds) {
+            return new Promise(resolve => {
+                window.setTimeout(resolve, milliseconds);
+            });
+        }
+    </script>
+</body>
+</html>
