@@ -146,7 +146,7 @@
             font-size: 0.92rem;
         }
 
-        .duplicate-option {
+        .checkbox-option {
             display: flex;
             align-items: center;
             gap: 9px;
@@ -155,7 +155,7 @@
             cursor: pointer;
         }
 
-        .duplicate-option input {
+        .checkbox-option input {
             width: 18px;
             height: 18px;
             margin: 0;
@@ -399,13 +399,22 @@
                     required
                 ></textarea>
 
-                <label class="duplicate-option" for="remove-duplicates">
+                <label class="checkbox-option" for="remove-duplicates">
                     <input
                         id="remove-duplicates"
                         type="checkbox"
                         checked
                     >
                     Odstraňovat duplicitní hodnoty
+                </label>
+
+                <label class="checkbox-option" for="verify-cdk">
+                    <input
+                        id="verify-cdk"
+                        type="checkbox"
+                        checked
+                    >
+                    Ověřovat dostupnost UUID v České digitální knihovně
                 </label>
 
                 <div class="controls">
@@ -452,6 +461,7 @@
                                 <th>Typ dokumentu</th>
                                 <th>Rok</th>
                                 <th>NDK</th>
+                                <th id="cdk-header">ČDK</th>
                                 <th>K3</th>
                             </tr>
                         </thead>
@@ -474,6 +484,12 @@
 
         const NDK_URL =
             "https://www.ndk.cz/uuid/";
+
+        const CDK_API_URL =
+            "https://api.ceskadigitalniknihovna.cz/search/api/client/v7.0";
+
+        const CDK_URL =
+            "https://ceskadigitalniknihovna.cz/uuid/";
 
         const KRAMERIUS3_URL =
             "http://kramerius.nkp.cz/kramerius/handle/";
@@ -498,6 +514,8 @@
         const input = document.getElementById("handles-input");
         const removeDuplicatesInput =
             document.getElementById("remove-duplicates");
+        const verifyCdkInput =
+            document.getElementById("verify-cdk");
         const searchButton = document.getElementById("search-button");
         const clearButton = document.getElementById("clear-button");
         const copyButton = document.getElementById("copy-button");
@@ -508,6 +526,7 @@
         const resultsSection = document.getElementById("results");
         const resultsBody = document.getElementById("results-body");
         const resultsSummary = document.getElementById("results-summary");
+        const cdkHeader = document.getElementById("cdk-header");
 
         let currentResults = [];
 
@@ -524,6 +543,7 @@
                 return;
             }
 
+            cdkHeader.style.display = verifyCdkInput.checked ? '' : 'none';
             setProcessing(true);
             clearResults();
             currentResults = [];
@@ -539,7 +559,7 @@
                 );
 
                 try {
-                    const result = await resolveHandle(handle);
+                    const result = await resolveHandle(handle, verifyCdkInput.checked);
                     currentResults.push(result);
                     appendResultRow(result);
                 } catch (error) {
@@ -552,6 +572,9 @@
                         year: "",
                         status: "Chyba",
                         found: false,
+                        cdkChecked: verifyCdkInput.checked,
+                        cdkExists: null,
+                        cdkError: "",
                         error: error.message
                     };
 
@@ -624,7 +647,9 @@
                     "nazev",
                     "typ_dokumentu",
                     "rok",
-                    "odkaz",
+                    "odkaz_ndk",
+                    "v_cdk",
+                    "odkaz_cdk",
                     "odkaz_k3"
                 ]
             ];
@@ -639,6 +664,10 @@
                     item.year,
                     item.found
                         ? NDK_URL + item.pid
+                        : "",
+                    getCdkCsvStatus(item),
+                    item.cdkExists
+                        ? CDK_URL + item.pid
                         : "",
                     KRAMERIUS3_URL + item.handle
                 ]);
@@ -663,7 +692,7 @@
             URL.revokeObjectURL(url);
         });
 
-        async function resolveHandle(handle) {
+        async function resolveHandle(handle, verifyCdk) {
             const records = await searchHandle(handle);
 
             if (records.length === 0) {
@@ -675,6 +704,9 @@
                     year: "",
                     status: "Nenalezeno v NDK",
                     found: false,
+                    cdkChecked: verifyCdk,
+                    cdkExists: null,
+                    cdkError: "",
                     error: ""
                 };
             }
@@ -690,6 +722,9 @@
                     year: "",
                     status: "Nelze určit výsledek",
                     found: false,
+                    cdkChecked: verifyCdk,
+                    cdkExists: null,
+                    cdkError: "",
                     error: ""
                 };
             }
@@ -702,6 +737,18 @@
                 ? (firstValue(record["root.title"]) || firstValue(record["title.search"]))
                 : (firstValue(record["title.search"]) || firstValue(record["root.title"]));
 
+            let cdkExists = null;
+            let cdkError = "";
+
+            if (verifyCdk) {
+                try {
+                    cdkExists = await checkCdkUuid(pid);
+                } catch (error) {
+                    console.error(error);
+                    cdkError = error.message;
+                }
+            }
+
             return {
                 handle,
                 pid,
@@ -710,8 +757,46 @@
                 year: firstValue(record["date.str"]),
                 status: "Nalezeno",
                 found: true,
+                cdkChecked: verifyCdk,
+                cdkExists,
+                cdkError,
                 error: ""
             };
+        }
+
+        async function checkCdkUuid(pid) {
+            const parameters = new URLSearchParams({
+                q: `pid:"${escapeSolrValue(pid)}"`,
+                fl: "pid",
+                rows: "10",
+                start: "0",
+                wt: "json"
+            });
+
+            const response = await fetch(
+                `${CDK_API_URL}/search?${parameters.toString()}`,
+                {
+                    headers: {
+                        "Accept": "application/json"
+                    }
+                }
+            );
+
+            if (!response.ok) {
+                throw new Error(
+                    `API ČDK vrátilo HTTP ${response.status}.`
+                );
+            }
+
+            const data = await response.json();
+            const records = data?.response?.docs ?? [];
+            const normalizedPid = String(pid).toLowerCase();
+
+            return records.some((record) =>
+                toArray(record.pid)
+                    .map(value => String(value).toLowerCase())
+                    .includes(normalizedPid)
+            );
         }
 
         async function searchHandle(handle) {
@@ -835,6 +920,25 @@
 
             linkCell.appendChild(link);
 
+            const cdkLinkCell = document.createElement("td");
+
+            if (!result.found || !result.cdkChecked) {
+                cdkLinkCell.textContent = "—";
+            } else if (result.cdkError) {
+                cdkLinkCell.textContent = "Chyba ověření";
+                cdkLinkCell.title = result.cdkError;
+            } else if (result.cdkExists) {
+                const cdkLink = document.createElement("a");
+                cdkLink.className = "table-link";
+                cdkLink.target = "_blank";
+                cdkLink.rel = "noopener noreferrer";
+                cdkLink.href = CDK_URL + result.pid;
+                cdkLink.textContent = "Otevřít v ČDK";
+                cdkLinkCell.appendChild(cdkLink);
+            } else {
+                cdkLinkCell.textContent = "Nenalezeno";
+            }
+
             const k3LinkCell = document.createElement("td");
 
             const k3Link = document.createElement("a");
@@ -845,6 +949,8 @@
             k3Link.textContent = "Otevřít v K3";
             k3LinkCell.appendChild(k3Link);
 
+            cdkLinkCell.style.display = result.cdkChecked ? "" : "none";
+
             row.append(
                 statusCell,
                 handleCell,
@@ -853,6 +959,7 @@
                 typeCell,
                 yearCell,
                 linkCell,
+                cdkLinkCell,
                 k3LinkCell
             );
 
@@ -931,6 +1038,7 @@
             clearButton.disabled = isProcessing;
             input.disabled = isProcessing;
             removeDuplicatesInput.disabled = isProcessing;
+            verifyCdkInput.disabled = isProcessing;
 
             searchButton.textContent = isProcessing
                 ? "Zpracovávám…"
@@ -963,6 +1071,22 @@
             if (type === "warning") {
                 statusBox.classList.add("status-warning");
             }
+        }
+
+        function getCdkCsvStatus(item) {
+            if (!item.cdkChecked) {
+                return "neověřováno";
+            }
+
+            if (!item.found) {
+                return "";
+            }
+
+            if (item.cdkError) {
+                return "chyba ověření";
+            }
+
+            return item.cdkExists ? "ano" : "ne";
         }
 
         function csvEscape(value) {
