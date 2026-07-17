@@ -643,10 +643,8 @@
                     item.year,
                     item.found
                         ? NDK_URL + item.pid
-                        : KRAMERIUS3_URL + item.handle,
-                    item.found
-                        ? KRAMERIUS3_URL + item.handle
-                        : ""
+                        : "",
+                    KRAMERIUS3_URL + item.handle
                 ]);
             });
 
