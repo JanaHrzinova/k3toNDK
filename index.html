@@ -236,9 +236,14 @@
         }
 
         .metadata-row-uuid {
-            white-space: nowrap;
-            overflow-x: auto;
+            white-space: normal;
+            overflow: visible;
             padding-bottom: 2px;
+        }
+
+        .metadata-row-uuid code {
+            overflow-wrap: anywhere;
+            word-break: break-all;
         }
 
         code {
@@ -316,6 +321,10 @@
         .result-layout > .actions {
             grid-column: 1 / -1;
             margin-top: 2px;
+        }
+
+        .result-layout.without-thumbnail {
+            grid-template-columns: 1fr;
         }
 
 
@@ -448,61 +457,61 @@
 </h1>
 
             <p class="intro">
-                Zadejte identifikátor Handle nebo celý trvalý odkaz dokumentu z K3.
-                Aplikace vyhledá odpovídající dokument v NDK a zobrazí základní informace o něm.
+                Zadejte identifikátor Handle nebo celý trvalý odkaz dokumentu z&nbsp;K3.
+                Aplikace vyhledá odpovídající dokument v&nbsp;NDK a&nbsp;zobrazí základní informace o&nbsp;něm.
             </p>
 
             
             <details class="help-box">
-                <summary>O aplikaci</summary>
+                <summary>O&nbsp;aplikaci</summary>
 
                 <p>
-                    Aplikace slouží k vyhledávání a převodu odkazů ze starší verze
+                    Aplikace slouží k&nbsp;vyhledávání a&nbsp;převodu odkazů ze starší verze
                     digitální knihovny Kramerius 3 (K3) do novější verze Národní
-                    digitální knihovny (NDK). Pracuje s identifikátory Handle
-                    a persistentními odkazy.
+                    digitální knihovny (NDK). Pracuje s&nbsp;identifikátory Handle
+                    a&nbsp;persistentními odkazy.
                 </p>
 
                 <h3>Použití</h3>
 
                 <p>
-                    Aplikace umožňuje vyhledávat dokumenty jednotlivě i hromadně.
+                    Aplikace umožňuje vyhledávat dokumenty jednotlivě i&nbsp;hromadně.
                     Do vyhledávacího pole vložte identifikátor Handle nebo persistentní
                     odkaz do K3 (např.
                     <code>ABA001/12370785</code>,
                     <code>handle:ABA001/12370785</code> nebo
                     <code>http://kramerius.nkp.cz/kramerius/handle/ABA001/12370785</code>)
-                    a aplikace vyhledá odpovídající dokument v NDK.
-                    Pokud dokument v NDK nenajde, nabídne přímý odkaz na jeho otevření
-                    v Krameriu 3.
+                    a&nbsp;aplikace vyhledá odpovídající dokument v&nbsp;NDK.
+                    Pokud dokument v&nbsp;NDK nenajde, nabídne přímý odkaz na jeho otevření
+                    v&nbsp;Krameriu 3.
                 </p>
 
                 <p>
-                    V režimu <strong>Hromadné vyhledávání</strong> je možné vložit více
-                    identifikátorů Handle najednou a výsledky následně stáhnout
+                    V&nbsp;režimu <strong>Hromadné vyhledávání</strong> je možné vložit více
+                    identifikátorů Handle najednou a&nbsp;výsledky následně stáhnout
                     ve formátu CSV.
                 </p>
 
                 <h3>Další informace</h3>
 
                 <p>
-                    Již delší dobu probíhá migrace obsahu z K3 do NDK. V první fázi migrace byla převedena většina
-                    monografií a menší část periodik.
-                    V K3 jsou identifikátory Handle přiděleny na všech úrovních
-                    dokumentů (titul, stránka, ročník periodika i číslo periodika).
-                    Při dřívější migraci do NDK však byly zachovány pouze u titulů
-                    jednoduchých monografií (u vícesvazků jen na úrovni jednotlivých svazků) a jednotlivých ročníků periodik.
+                    Již delší dobu probíhá migrace obsahu z&nbsp;K3 do NDK. V&nbsp;první fázi migrace byla převedena většina
+                    monografií a&nbsp;menší část periodik.
+                    V&nbsp;K3 jsou identifikátory Handle přiděleny na všech úrovních
+                    dokumentů (titul, stránka, ročník periodika i&nbsp;číslo periodika).
+                    Při dřívější migraci do NDK však byly zachovány pouze u&nbsp;titulů
+                    jednoduchých monografií (u&nbsp;vícesvazků jen na úrovni jednotlivých svazků) a&nbsp;jednotlivých ročníků periodik.
                     Pokud tedy aplikace podle zadaného identifikátoru Handle dokument
-                    v NDK nenajde, nemusí to znamenat, že dokument dosud nebyl převeden.
+                    v&nbsp;NDK nenajde, nemusí to znamenat, že dokument dosud nebyl převeden.
                     <strong>Je možné, že zadaný perzistentní odkaz směřuje na úroveň dokumentu,
-                    u které identifikátor Handle zatím v NDK není uložen.</strong>
+                    u&nbsp;které identifikátor Handle zatím v&nbsp;NDK není uložen.</strong>
                 </p>
 
                 <p>
-                    V současnosti (stav k červenci 2026) se začínají metadata dříve migrovaných dokumentů průběžně
+                    V&nbsp;současnosti (stav k&nbsp;červenci 2026) se začínají metadata dříve migrovaných dokumentů průběžně
                     doplňovat tak, aby byly identifikátory Handle zachovány na všech
                     úrovních dokumentů. Zároveň probíhá převod dalších dokumentů
-                    z K3 do NDK.
+                    z&nbsp;K3 do NDK.
                 </p>
             </details>
 
@@ -607,7 +616,7 @@
                     return;
                 }
 
-                renderResult(record, handle);
+                await renderResult(record, handle);
                 showStatus("Dokument byl nalezen.", "success");
             } catch (error) {
                 console.error(error);
@@ -710,7 +719,7 @@
             resultBox.appendChild(actions);
         }
 
-        function renderResult(record, handle) {
+        async function renderResult(record, handle) {
             resultBox.replaceChildren();
 
             const pid = firstValue(record.pid);
@@ -726,16 +735,19 @@
             const thumbnailWrap = createElement("div", "thumbnail-wrap");
             const content = createElement("div", "result-content");
 
+            const thumbnailPid = await getThumbnailPid(pid, model);
+
             const thumbnail = document.createElement("img");
             thumbnail.className = "thumbnail";
             thumbnail.src =
                 THUMBNAIL_BASE_URL +
-                encodeURIComponent(pid) +
+                encodeURIComponent(thumbnailPid) +
                 "/image/thumb";
             thumbnail.alt = `Náhled dokumentu: ${title}`;
             thumbnail.loading = "lazy";
             thumbnail.addEventListener("error", () => {
                 thumbnailWrap.remove();
+                layout.classList.add("without-thumbnail");
             });
 
             thumbnailWrap.appendChild(thumbnail);
@@ -795,6 +807,155 @@
             layout.append(thumbnailWrap, content, actions);
             card.appendChild(layout);
             resultBox.appendChild(card);
+        }
+
+        async function getThumbnailPid(pid, model) {
+            if (model !== "periodicalvolume") {
+                return pid;
+            }
+
+            try {
+                const volumeStructure = await loadStructure(pid);
+                const volumePids = collectStructurePids(volumeStructure);
+
+                const issuePid = volumePids.find(
+                    candidate => candidate && candidate !== pid
+                );
+
+                if (!issuePid) {
+                    return pid;
+                }
+
+                /*
+                 * Některé odpovědi obsahují už v ročníku také vnořené stránky.
+                 * Pokud je za UUID čísla další UUID, zkusíme je použít přímo.
+                 */
+                const issueIndex = volumePids.indexOf(issuePid);
+                const nestedPagePid = volumePids
+                    .slice(issueIndex + 1)
+                    .find(candidate =>
+                        candidate &&
+                        candidate !== pid &&
+                        candidate !== issuePid
+                    );
+
+                if (nestedPagePid) {
+                    return nestedPagePid;
+                }
+
+                const issueStructure = await loadStructure(issuePid);
+                const issuePids = collectStructurePids(issueStructure);
+
+                const pagePid = issuePids.find(
+                    candidate =>
+                        candidate &&
+                        candidate !== issuePid &&
+                        candidate !== pid
+                );
+
+                return pagePid || issuePid;
+            } catch (error) {
+                console.warn(
+                    "Nepodařilo se zjistit první stránku ročníku periodika.",
+                    error
+                );
+                return pid;
+            }
+        }
+
+        async function loadStructure(pid) {
+            const response = await fetch(
+                THUMBNAIL_BASE_URL +
+                encodeURIComponent(pid) +
+                "/info/structure",
+                {
+                    headers: {
+                        "Accept": "application/json"
+                    }
+                }
+            );
+
+            if (!response.ok) {
+                throw new Error(
+                    `API struktury vrátilo HTTP ${response.status}.`
+                );
+            }
+
+            return response.json();
+        }
+
+        function collectStructurePids(value) {
+            const pids = [];
+
+            function visit(node) {
+                if (node === null || node === undefined) {
+                    return;
+                }
+
+                if (Array.isArray(node)) {
+                    node.forEach(visit);
+                    return;
+                }
+
+                if (typeof node !== "object") {
+                    return;
+                }
+
+                const pid = extractPid(node);
+
+                if (pid && !pids.includes(pid)) {
+                    pids.push(pid);
+                }
+
+                /*
+                 * Nejprve procházíme nejčastější kontejnery, aby zůstalo
+                 * zachováno pořadí dokumentů vrácené API.
+                 */
+                const preferredKeys = [
+                    "children",
+                    "items",
+                    "nodes",
+                    "structure",
+                    "data",
+                    "result",
+                    "docs"
+                ];
+
+                preferredKeys.forEach(key => {
+                    if (Object.prototype.hasOwnProperty.call(node, key)) {
+                        visit(node[key]);
+                    }
+                });
+
+                Object.entries(node).forEach(([key, child]) => {
+                    if (!preferredKeys.includes(key)) {
+                        visit(child);
+                    }
+                });
+            }
+
+            visit(value);
+            return pids;
+        }
+
+        function extractPid(node) {
+            const candidates = [
+                node.pid,
+                node.id,
+                node.uuid,
+                node["dc.identifier"],
+                node.identifier
+            ];
+
+            for (const candidate of candidates) {
+                const value = firstValue(candidate);
+
+                if (value.startsWith("uuid:")) {
+                    return value;
+                }
+            }
+
+            return "";
         }
 
         function getDocumentTitle(record) {
