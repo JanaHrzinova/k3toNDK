@@ -1,0 +1,1070 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Vyhledání dokumentu podle identifikátoru Handle.">
+    <title>Vyhledání dokumentu podle Handle</title>
+
+    <style>
+        :root {
+            --background: #f5f7fa;
+            --surface: #ffffff;
+            --text: #202124;
+            --muted: #5f6368;
+            --border: #d7dce2;
+            --primary: #185abc;
+            --primary-hover: #124a9c;
+            --secondary: #eef3fb;
+            --error: #a50e0e;
+            --success: #137333;
+            --shadow: 0 8px 24px rgba(32, 33, 36, 0.08);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background: var(--background);
+            color: var(--text);
+            font-family: Arial, Helvetica, sans-serif;
+            line-height: 1.5;
+        }
+
+        main {
+            width: min(1180px, calc(100% - 32px));
+            margin: 0 auto;
+            padding: 48px 0;
+        }
+
+        
+        .panel {
+            padding: 30px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            box-shadow: var(--shadow);
+            overflow: hidden;
+        }
+
+
+
+        .top-nav {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            margin: -32px -32px 30px;
+            border-bottom: 1px solid var(--border);
+            background: #fff;
+            border-radius: 14px 14px 0 0;
+            overflow: hidden;
+        }
+
+        .top-nav a {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            min-height: 58px;
+            padding: 14px 18px;
+            color: var(--text);
+            font-weight: 700;
+            text-decoration: none;
+        }
+
+        .top-nav a:hover {
+            background: #f7f9fb;
+            color: var(--primary);
+        }
+
+        .top-nav a[aria-current="page"] {
+            color: var(--primary);
+        }
+
+        .top-nav a[aria-current="page"]::after {
+            content: "";
+            position: absolute;
+            left: 18%;
+            right: 18%;
+            bottom: 0;
+            height: 3px;
+            border-radius: 3px 3px 0 0;
+            background: var(--primary);
+        }
+
+        .top-nav .nav-icon {
+            font-size: 1rem;
+            line-height: 1;
+        }
+
+
+        h1 {
+            display: flex;
+            align-items: center;
+            gap: 0.35em;
+            flex-wrap: wrap;
+        }
+
+        .title-arrow {
+            display: inline-flex;
+            align-items: center;
+            color: currentColor;
+        }
+
+        .title-arrow svg {
+            width: 0.9em;
+            height: 0.9em;
+            display: block;
+        }
+
+        h1 {
+            margin: 0 0 12px;
+            font-size: clamp(1.8rem, 4vw, 2.5rem);
+            line-height: 1.15;
+        }
+
+        .intro {
+            margin: 0 0 28px;
+            color: var(--muted);
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 700;
+        }
+
+        input,
+        button {
+            font: inherit;
+        }
+
+        input {
+            width: 100%;
+            min-height: 48px;
+            padding: 11px 13px;
+            border: 1px solid #7a8088;
+            border-radius: 8px;
+            background: #fff;
+            color: var(--text);
+        }
+
+        input:focus {
+            outline: 3px solid rgba(24, 90, 188, 0.24);
+            border-color: var(--primary);
+        }
+
+        .hint {
+            margin: 8px 0 0;
+            color: var(--muted);
+            font-size: 0.92rem;
+            overflow-wrap: anywhere;
+        }
+
+        .submit-button {
+            width: 100%;
+            min-height: 48px;
+            margin-top: 16px;
+            border: 0;
+            border-radius: 8px;
+            background: var(--primary);
+            color: #fff;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .submit-button:hover {
+            background: var(--primary-hover);
+        }
+
+        .submit-button:disabled {
+            cursor: wait;
+            opacity: 0.7;
+        }
+
+        #status {
+            min-height: 24px;
+            margin-top: 20px;
+        }
+
+        .status-error {
+            color: var(--error);
+            font-weight: 700;
+        }
+
+        .status-success {
+            color: var(--success);
+            font-weight: 700;
+        }
+
+        #result {
+            margin-top: 24px;
+        }
+
+        .result-card {
+            padding: 24px;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            background: #fff;
+        }
+
+        .result-card h2 {
+            margin: 0 0 18px;
+            font-size: 1.45rem;
+            line-height: 1.3;
+        }
+
+        .metadata {
+            margin: 0 0 22px;
+        }
+
+        .metadata-row {
+            margin: 0 0 10px;
+            overflow-wrap: anywhere;
+        }
+
+        .metadata-label {
+            font-weight: 700;
+        }
+
+        .metadata-value {
+            margin-left: 4px;
+        }
+
+        .metadata-row-uuid {
+            white-space: normal;
+            overflow: visible;
+            padding-bottom: 2px;
+        }
+
+        .metadata-row-uuid code {
+            overflow-wrap: anywhere;
+            word-break: break-all;
+        }
+
+        code {
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 0.95em;
+        }
+
+        .actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .button,
+        .copy-button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 44px;
+            padding: 10px 16px;
+            border-radius: 8px;
+            font: inherit;
+            font-weight: 700;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        .button {
+            border: 1px solid var(--primary);
+            background: var(--primary);
+            color: #fff;
+        }
+
+        .button:hover {
+            background: var(--primary-hover);
+            border-color: var(--primary-hover);
+        }
+
+        .copy-button {
+            border: 1px solid var(--primary);
+            background: var(--secondary);
+            color: var(--primary-hover);
+        }
+
+        .copy-button:hover {
+            background: #dfe9f8;
+        }
+
+
+        .result-layout {
+            display: grid;
+            grid-template-columns: minmax(140px, 190px) minmax(0, 1fr);
+            gap: 24px;
+            align-items: start;
+        }
+
+        .thumbnail-wrap {
+            display: flex;
+            justify-content: center;
+        }
+
+        .thumbnail {
+            display: block;
+            width: 100%;
+            max-width: 190px;
+            height: auto;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: #fff;
+        }
+
+        .result-content {
+            min-width: 0;
+        }
+
+        .result-layout > .actions {
+            grid-column: 1 / -1;
+            margin-top: 2px;
+        }
+
+        .result-layout.without-thumbnail {
+            grid-template-columns: 1fr;
+        }
+
+
+        .help-box {
+            margin: 24px 0;
+            padding: 12px 16px;
+            border: 1px solid #d9dde3;
+            border-radius: 8px;
+            background: #ffffff;
+        }
+
+        .help-box summary {
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #555b63;
+            user-select: none;
+        }
+
+        .help-box[open] summary {
+            margin-bottom: 10px;
+        }
+
+        .help-box p {
+            color: #555b63;
+            font-size: 0.95rem;
+        }
+
+        .help-box p:last-child {
+            margin-bottom: 0;
+        }
+
+
+        .help-box h3 {
+            margin: 18px 0 8px;
+            font-size: 1rem;
+            color: #444;
+        }
+
+        .help-box code {
+            font-family: Consolas, "Courier New", monospace;
+            background: #f5f5f5;
+            padding: 1px 4px;
+            border-radius: 4px;
+        }
+
+        footer {
+            margin-top: 18px;
+            color: var(--muted);
+            font-size: 0.9rem;
+            text-align: center;
+        }
+
+        @media (max-width: 600px) {
+            main {
+                width: min(100% - 20px, 1180px);
+                padding: 20px 0;
+            }
+
+            .panel {
+                padding: 22px 18px;
+            }
+
+            .top-nav {
+                margin: -22px -18px 24px;
+            }
+
+            .top-nav a {
+                min-height: 54px;
+                padding: 12px 8px;
+                font-size: 0.92rem;
+            }
+
+            .top-nav .nav-icon {
+                display: none;
+            }
+
+            .result-layout {
+                grid-template-columns: 1fr;
+            }
+
+            .thumbnail-wrap {
+                justify-content: flex-start;
+            }
+
+            .thumbnail {
+                max-width: 180px;
+            }
+
+
+            .actions {
+                flex-direction: column;
+            }
+
+            .button,
+            .copy-button {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <main>
+        <section class="panel" aria-labelledby="page-title">
+
+            <nav class="top-nav" aria-label="Navigace části K3">
+                <a href="hromadne.html">
+                    <span class="nav-icon" aria-hidden="true">▦</span>
+                    Hromadné vyhledávání
+                </a>
+                <a href="index.html">
+                    <span class="nav-icon" aria-hidden="true">⌂</span>
+                    Zpět na rozcestník
+                </a>
+            </nav>
+            <h1>
+    <span>Kramerius 3</span>
+    <span class="title-arrow" aria-hidden="true">
+        <svg viewBox="0 0 24 24" focusable="false">
+            <path d="M5 12h12M13 6l6 6-6 6"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2.6"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"/>
+        </svg>
+    </span>
+    <span>NDK</span>
+</h1>
+
+            <p class="intro">
+                Zadejte identifikátor Handle nebo celý trvalý odkaz dokumentu z&nbsp;K3.
+                Aplikace vyhledá odpovídající dokument v&nbsp;NDK a&nbsp;zobrazí základní informace o&nbsp;něm.
+            </p>
+
+<form id="search-form">
+                <label for="handle-input">Handle dokumentu</label>
+
+                <input
+                    id="handle-input"
+                    name="handle"
+                    type="text"
+                    placeholder="Např. ABA001/12539252"
+                    autocomplete="off"
+                    spellcheck="false"
+                    required
+                >
+
+                <p class="hint">
+                    Lze vložit také adresu ve tvaru:
+                    http://kramerius.nkp.cz/kramerius/handle/ABA001/12539252
+                </p>
+
+                <button id="submit-button" class="submit-button" type="submit">
+                    Vyhledat dokument
+                </button>
+            </form>
+
+            <div id="status" role="status" aria-live="polite"></div>
+            <div id="result"></div>
+        </section>
+
+        <footer>
+            Jana Hrzinová 2026. Vyrobeno za pomoci ChatGPT 5.5
+        </footer>
+    </main>
+
+    <script>
+        "use strict";
+
+        const API_URL =
+            "https://api.kramerius7.nkp.cz/search/api/client/v7.0/search";
+
+        const DOCUMENT_URL =
+            "https://www.ndk.cz/uuid/";
+
+        const KRAMERIUS3_HANDLE_URL =
+            "http://kramerius.nkp.cz/kramerius/handle/";
+
+        const THUMBNAIL_BASE_URL =
+            "https://api.kramerius7.nkp.cz/search/api/client/v7.0/items/";
+
+        const MODEL_LABELS = {
+            monograph: "Monografie",
+            periodical: "Periodikum",
+            periodicalvolume: "Ročník periodika",
+            periodicalitem: "Číslo periodika",
+            page: "Stránka",
+            article: "Článek",
+            map: "Mapa",
+            graphic: "Grafika",
+            sheetmusic: "Notový tisk",
+            manuscript: "Rukopis",
+            soundrecording: "Zvukový dokument"
+        };
+
+        const form = document.getElementById("search-form");
+        const handleInput = document.getElementById("handle-input");
+        const submitButton = document.getElementById("submit-button");
+        const statusBox = document.getElementById("status");
+        const resultBox = document.getElementById("result");
+
+        form.addEventListener("submit", async (event) => {
+            event.preventDefault();
+            clearOutput();
+
+            const handle = normalizeHandle(handleInput.value);
+
+            if (!handle) {
+                showStatus("Zadejte platný identifikátor Handle.", "error");
+                handleInput.focus();
+                return;
+            }
+
+            setLoading(true);
+
+            try {
+                const records = await searchHandle(handle);
+
+                if (records.length === 0) {
+                    showNotFound(handle);
+                    return;
+                }
+
+                const record = selectBestResult(records, handle);
+
+                if (!record) {
+                    showStatus(
+                        "Dokument byl nalezen, ale nepodařilo se určit správný záznam.",
+                        "error"
+                    );
+                    return;
+                }
+
+                await renderResult(record, handle);
+                showStatus("Dokument byl nalezen.", "success");
+            } catch (error) {
+                console.error(error);
+
+                showStatus(
+                    error instanceof TypeError
+                        ? "Prohlížeč nemohl načíst odpověď API. Může jít o síťovou chybu nebo blokování CORS."
+                        : `Vyhledávání selhalo: ${error.message}`,
+                    "error"
+                );
+            } finally {
+                setLoading(false);
+            }
+        });
+
+        async function searchHandle(handle) {
+            const query = `id_other:"handle:${escapeSolrValue(handle)}"`;
+
+            const parameters = new URLSearchParams({
+                q: query,
+                fl: [
+                    "pid",
+                    "date.str",
+                    "page.number",
+                    "root.model",
+                    "model",
+                    "root.title",
+                    "title.search",
+                    "id_other"
+                ].join(","),
+                rows: "1000",
+                start: "0",
+                wt: "json"
+            });
+
+            const response = await fetch(
+                `${API_URL}?${parameters.toString()}`,
+                {
+                    headers: {
+                        "Accept": "application/json"
+                    }
+                }
+            );
+
+            if (!response.ok) {
+                throw new Error(`API vrátilo HTTP ${response.status}.`);
+            }
+
+            const data = await response.json();
+            return data?.response?.docs ?? [];
+        }
+
+        function selectBestResult(records, handle) {
+            const exactHandle = `handle:${handle}`.toLowerCase();
+
+            const exactMatches = records.filter((record) =>
+                toArray(record.id_other)
+                    .map((value) => String(value).toLowerCase())
+                    .includes(exactHandle)
+            );
+
+            const candidates = exactMatches.length > 0
+                ? exactMatches
+                : records;
+
+            const priority = {
+                monograph: 100,
+                periodicalvolume: 95,
+                periodical: 90,
+                periodicalitem: 85,
+                article: 80,
+                page: 70
+            };
+
+            return [...candidates]
+                .filter((record) => firstValue(record.pid))
+                .sort((a, b) => {
+                    const scoreA = priority[firstValue(a.model)] ?? 10;
+                    const scoreB = priority[firstValue(b.model)] ?? 10;
+                    return scoreB - scoreA;
+                })[0] ?? null;
+        }
+
+        function showNotFound(handle) {
+            showStatus(
+                "Pro zadaný Handle nebyl v Národní digitální knihovně nalezen žádný dokument.",
+                "error"
+            );
+
+            const actions = createElement("div", "actions");
+            actions.style.marginTop = "16px";
+
+            const oldLink = createElement("a", "button");
+            oldLink.href = KRAMERIUS3_HANDLE_URL + handle;
+            oldLink.target = "_blank";
+            oldLink.rel = "noopener noreferrer";
+            oldLink.textContent = "Otevřít v K3";
+
+            actions.appendChild(oldLink);
+            resultBox.appendChild(actions);
+        }
+
+        async function renderResult(record, handle) {
+            resultBox.replaceChildren();
+
+            const pid = firstValue(record.pid);
+            const model = firstValue(record.model);
+            const rootModel = firstValue(record["root.model"]);
+            const title = getDocumentTitle(record);
+            const year = firstValue(record["date.str"]);
+            const pageNumber = firstValue(record["page.number"]);
+            const documentType = getDocumentType(model, rootModel);
+
+            const card = createElement("section", "result-card");
+            const layout = createElement("div", "result-layout");
+            const thumbnailWrap = createElement("div", "thumbnail-wrap");
+            const content = createElement("div", "result-content");
+
+            const thumbnailPid = await getThumbnailPid(pid, model);
+
+            const thumbnail = document.createElement("img");
+            thumbnail.className = "thumbnail";
+            thumbnail.src =
+                THUMBNAIL_BASE_URL +
+                encodeURIComponent(thumbnailPid) +
+                "/image/thumb";
+            thumbnail.alt = `Náhled dokumentu: ${title}`;
+            thumbnail.loading = "lazy";
+            thumbnail.addEventListener("error", () => {
+                thumbnailWrap.remove();
+                layout.classList.add("without-thumbnail");
+            });
+
+            thumbnailWrap.appendChild(thumbnail);
+
+            const heading = document.createElement("h2");
+            heading.textContent = title;
+
+            const metadata = createElement("div", "metadata");
+
+            appendMetadata(metadata, "Typ dokumentu", documentType);
+
+            if (year) {
+                appendMetadata(metadata, "Rok vydání", year);
+            }
+
+            if (pageNumber) {
+                appendMetadata(metadata, "Číslo stránky", pageNumber);
+            }
+
+            const uuidCode = document.createElement("code");
+            uuidCode.textContent = pid;
+            appendMetadata(metadata, "UUID", uuidCode);
+
+            const handleCode = document.createElement("code");
+            handleCode.textContent = handle;
+            appendMetadata(metadata, "Handle", handleCode);
+
+            const actions = createElement("div", "actions");
+
+            const documentLink = createElement("a", "button");
+            documentLink.href = DOCUMENT_URL + pid;
+            documentLink.target = "_blank";
+            documentLink.rel = "noopener noreferrer";
+            documentLink.textContent = "Otevřít v NDK";
+
+            const k3Link = createElement("a", "button");
+            k3Link.href = KRAMERIUS3_HANDLE_URL + handle;
+            k3Link.target = "_blank";
+            k3Link.rel = "noopener noreferrer";
+            k3Link.textContent = "Otevřít v K3";
+
+            const copyUuidButton = createElement("button", "copy-button");
+            copyUuidButton.type = "button";
+            copyUuidButton.textContent = "Kopírovat UUID";
+            copyUuidButton.addEventListener("click", () => {
+                copyToClipboard(pid, copyUuidButton);
+            });
+
+            const copyHandleButton = createElement("button", "copy-button");
+            copyHandleButton.type = "button";
+            copyHandleButton.textContent = "Kopírovat Handle";
+            copyHandleButton.addEventListener("click", () => {
+                copyToClipboard(handle, copyHandleButton);
+            });
+
+            actions.append(
+                documentLink,
+                k3Link,
+                copyUuidButton,
+                copyHandleButton
+            );
+
+            content.append(heading, metadata);
+            layout.append(thumbnailWrap, content, actions);
+            card.appendChild(layout);
+            resultBox.appendChild(card);
+        }
+
+        async function getThumbnailPid(pid, model) {
+            if (model !== "periodicalvolume") {
+                return pid;
+            }
+
+            try {
+                const volumeStructure = await loadStructure(pid);
+                const volumePids = collectStructurePids(volumeStructure);
+
+                const issuePid = volumePids.find(
+                    candidate => candidate && candidate !== pid
+                );
+
+                if (!issuePid) {
+                    return pid;
+                }
+
+                /*
+                 * Některé odpovědi obsahují už v ročníku také vnořené stránky.
+                 * Pokud je za UUID čísla další UUID, zkusíme je použít přímo.
+                 */
+                const issueIndex = volumePids.indexOf(issuePid);
+                const nestedPagePid = volumePids
+                    .slice(issueIndex + 1)
+                    .find(candidate =>
+                        candidate &&
+                        candidate !== pid &&
+                        candidate !== issuePid
+                    );
+
+                if (nestedPagePid) {
+                    return nestedPagePid;
+                }
+
+                const issueStructure = await loadStructure(issuePid);
+                const issuePids = collectStructurePids(issueStructure);
+
+                const pagePid = issuePids.find(
+                    candidate =>
+                        candidate &&
+                        candidate !== issuePid &&
+                        candidate !== pid
+                );
+
+                return pagePid || issuePid;
+            } catch (error) {
+                console.warn(
+                    "Nepodařilo se zjistit první stránku ročníku periodika.",
+                    error
+                );
+                return pid;
+            }
+        }
+
+        async function loadStructure(pid) {
+            const response = await fetch(
+                THUMBNAIL_BASE_URL +
+                encodeURIComponent(pid) +
+                "/info/structure",
+                {
+                    headers: {
+                        "Accept": "application/json"
+                    }
+                }
+            );
+
+            if (!response.ok) {
+                throw new Error(
+                    `API struktury vrátilo HTTP ${response.status}.`
+                );
+            }
+
+            return response.json();
+        }
+
+        function collectStructurePids(value) {
+            const pids = [];
+
+            function visit(node) {
+                if (node === null || node === undefined) {
+                    return;
+                }
+
+                if (Array.isArray(node)) {
+                    node.forEach(visit);
+                    return;
+                }
+
+                if (typeof node !== "object") {
+                    return;
+                }
+
+                const pid = extractPid(node);
+
+                if (pid && !pids.includes(pid)) {
+                    pids.push(pid);
+                }
+
+                /*
+                 * Nejprve procházíme nejčastější kontejnery, aby zůstalo
+                 * zachováno pořadí dokumentů vrácené API.
+                 */
+                const preferredKeys = [
+                    "children",
+                    "items",
+                    "nodes",
+                    "structure",
+                    "data",
+                    "result",
+                    "docs"
+                ];
+
+                preferredKeys.forEach(key => {
+                    if (Object.prototype.hasOwnProperty.call(node, key)) {
+                        visit(node[key]);
+                    }
+                });
+
+                Object.entries(node).forEach(([key, child]) => {
+                    if (!preferredKeys.includes(key)) {
+                        visit(child);
+                    }
+                });
+            }
+
+            visit(value);
+            return pids;
+        }
+
+        function extractPid(node) {
+            const candidates = [
+                node.pid,
+                node.id,
+                node.uuid,
+                node["dc.identifier"],
+                node.identifier
+            ];
+
+            for (const candidate of candidates) {
+                const value = firstValue(candidate);
+
+                if (value.startsWith("uuid:")) {
+                    return value;
+                }
+            }
+
+            return "";
+        }
+
+        function getDocumentTitle(record) {
+            const model = firstValue(record.model);
+
+            if (model === "page") {
+                return (
+                    firstValue(record["root.title"]) ||
+                    firstValue(record["title.search"]) ||
+                    "Dokument bez uvedeného názvu"
+                );
+            }
+
+            if (
+                model === "periodicalvolume" ||
+                model === "periodicalitem"
+            ) {
+                return (
+                    firstValue(record["root.title"]) ||
+                    firstValue(record["title.search"]) ||
+                    "Dokument bez uvedeného názvu"
+                );
+            }
+
+            return (
+                firstValue(record["title.search"]) ||
+                firstValue(record["root.title"]) ||
+                "Dokument bez uvedeného názvu"
+            );
+        }
+
+        function getDocumentType(model, rootModel) {
+            if (model === "page" && rootModel === "monograph") {
+                return "Stránka monografie";
+            }
+
+            if (model === "page" && rootModel === "periodical") {
+                return "Stránka periodika";
+            }
+
+            return MODEL_LABELS[model] || model || "Neurčený typ dokumentu";
+        }
+
+        function normalizeHandle(value) {
+            return value
+                .trim()
+                .replace(
+                    /^https?:\/\/kramerius\.nkp\.cz\/kramerius\/handle\//i,
+                    ""
+                )
+                .replace(/^handle:/i, "")
+                .replace(/^\/+|\/+$/g, "")
+                .trim();
+        }
+
+        function escapeSolrValue(value) {
+            return value
+                .replace(/\\/g, "\\\\")
+                .replace(/"/g, '\\"');
+        }
+
+        function toArray(value) {
+            if (Array.isArray(value)) {
+                return value.filter(
+                    (item) => item !== null && item !== undefined
+                );
+            }
+
+            if (value === null || value === undefined) {
+                return [];
+            }
+
+            return [value];
+        }
+
+        function firstValue(value) {
+            return toArray(value)
+                .map((item) => String(item).trim())
+                .find(Boolean) || "";
+        }
+
+        function appendMetadata(container, label, value) {
+            const row = createElement("p", "metadata-row");
+
+            if (label === "UUID") {
+                row.classList.add("metadata-row-uuid");
+            }
+
+            const labelElement = createElement("span", "metadata-label");
+            labelElement.textContent = `${label}:`;
+
+            const valueElement = createElement("span", "metadata-value");
+
+            if (value instanceof Node) {
+                valueElement.appendChild(value);
+            } else {
+                valueElement.textContent = value;
+            }
+
+            row.append(labelElement, valueElement);
+            container.appendChild(row);
+        }
+
+        async function copyToClipboard(text, button) {
+            const originalText = button.textContent;
+
+            try {
+                await navigator.clipboard.writeText(text);
+                button.textContent = "Zkopírováno";
+            } catch (error) {
+                console.error(error);
+                button.textContent = "Kopírování se nezdařilo";
+            }
+
+            window.setTimeout(() => {
+                button.textContent = originalText;
+            }, 1800);
+        }
+
+        function setLoading(isLoading) {
+            submitButton.disabled = isLoading;
+            submitButton.textContent = isLoading
+                ? "Vyhledávám…"
+                : "Vyhledat dokument";
+
+            if (isLoading) {
+                showStatus("Probíhá vyhledávání v digitální knihovně…");
+            }
+        }
+
+        function showStatus(message, type = "") {
+            statusBox.textContent = message;
+            statusBox.className = "";
+
+            if (type === "error") {
+                statusBox.classList.add("status-error");
+            }
+
+            if (type === "success") {
+                statusBox.classList.add("status-success");
+            }
+        }
+
+        function clearOutput() {
+            statusBox.textContent = "";
+            statusBox.className = "";
+            resultBox.replaceChildren();
+        }
+
+        function createElement(tagName, className = "") {
+            const element = document.createElement(tagName);
+
+            if (className) {
+                element.className = className;
+            }
+
+            return element;
+        }
+    </script>
+</body>
+</html>

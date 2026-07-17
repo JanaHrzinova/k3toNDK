@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Hromadné ověření existence UUID v České digitální knihovně.">
+    <title>Hromadné ověření UUID v ČDK</title>
+    <style>
+        :root {
+            --background: #f5f7fa; --surface: #ffffff; --text: #202124;
+            --muted: #5f6368; --border: #d7dce2; --primary: #185abc;
+            --primary-hover: #124a9c; --secondary: #eef3fb; --error: #a50e0e;
+            --success: #137333; --warning: #8a5a00;
+            --shadow: 0 8px 24px rgba(32, 33, 36, 0.08);
+        }
+        * { box-sizing: border-box; }
+        body { margin: 0; min-height: 100vh; background: var(--background); color: var(--text); font-family: Arial, Helvetica, sans-serif; line-height: 1.5; }
+        main { width: min(1180px, calc(100% - 32px)); margin: 0 auto; padding: 40px 0; }
+        .panel { padding: 30px; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; box-shadow: var(--shadow); overflow: hidden; }
+        .top-nav { display: grid; grid-template-columns: 1fr; margin: -32px -32px 30px; border-bottom: 1px solid var(--border); background: #fff; border-radius: 14px 14px 0 0; overflow: hidden; }
+        .top-nav a { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 58px; padding: 14px 18px; color: var(--text); font-weight: 700; text-decoration: none; }
+        .top-nav a:hover { background: #f7f9fb; color: var(--primary); }
+        h1 { margin: 0 0 12px; font-size: clamp(1.8rem, 4vw, 2.5rem); line-height: 1.15; }
+        .intro { margin: 0 0 24px; color: var(--muted); }
+        label { display: block; margin-bottom: 8px; font-weight: 700; }
+        textarea, button { font: inherit; }
+        textarea { width: 100%; min-height: 220px; padding: 14px; border: 1px solid #7a8088; border-radius: 8px; background: #fff; color: var(--text); resize: vertical; }
+        textarea:focus { outline: 3px solid rgba(24, 90, 188, 0.24); border-color: var(--primary); }
+        .hint { margin: 8px 0 0; color: var(--muted); font-size: 0.92rem; }
+        .checkbox-option { display: flex; align-items: center; gap: 9px; margin-top: 14px; font-weight: 400; cursor: pointer; }
+        .checkbox-option input { width: 18px; height: 18px; margin: 0; accent-color: var(--primary); }
+        .controls { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
+        button { min-height: 44px; padding: 10px 16px; border-radius: 8px; font-weight: 700; cursor: pointer; }
+        .primary-button { border: 1px solid var(--primary); background: var(--primary); color: #fff; }
+        .primary-button:hover { background: var(--primary-hover); border-color: var(--primary-hover); }
+        .secondary-button { border: 1px solid var(--primary); background: var(--secondary); color: var(--primary-hover); }
+        .secondary-button:hover { background: #dfe9f8; }
+        button:disabled { cursor: wait; opacity: 0.65; }
+        #status { min-height: 24px; margin-top: 18px; font-weight: 700; }
+        .status-error { color: var(--error); } .status-success { color: var(--success); } .status-warning { color: var(--warning); }
+        .progress-wrap { display: none; margin-top: 12px; }
+        .progress-bar { width: 100%; height: 12px; overflow: hidden; border-radius: 999px; background: #e8ecef; }
+        .progress-fill { width: 0; height: 100%; background: var(--primary); transition: width 0.2s ease; }
+        .results { margin-top: 28px; }
+        .results-header { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 12px; }
+        .results-header h2 { margin: 0; font-size: 1.4rem; }
+        .table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 10px; }
+        table { width: 100%; border-collapse: collapse; min-width: 760px; background: #fff; }
+        th, td { padding: 10px 12px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; font-family: Consolas, "Courier New", monospace; font-size: 0.88rem; }
+        th { background: #f7f9fb; font-size: 0.84rem; font-weight: 700; }
+        tr:last-child td { border-bottom: 0; }
+        code { font-family: Consolas, "Courier New", monospace; font-size: inherit; white-space: nowrap; }
+        .status-cell-found { color: var(--success); font-weight: 700; }
+        .status-cell-missing { color: var(--error); font-weight: 700; }
+        .table-link { color: var(--primary-hover); font-weight: 700; text-decoration: none; }
+        .table-link:hover { text-decoration: underline; }
+        footer { margin-top: 18px; color: var(--muted); font-size: 0.9rem; text-align: center; }
+        @media (max-width: 700px) {
+            main { width: min(100% - 20px, 1180px); padding: 20px 0; }
+            .panel { padding: 22px 18px; }
+            .top-nav { margin: -22px -18px 24px; }
+            .controls { flex-direction: column; }
+            .controls button { width: 100%; }
+        }
+    </style>
+</head>
+<body>
+    <main>
+        <section class="panel" aria-labelledby="page-title">
+            <nav class="top-nav" aria-label="Navigace">
+                <a href="index.html"><span aria-hidden="true">⌂</span> Zpět na rozcestník</a>
+            </nav>
+            <h1 id="page-title">Hromadné ověření UUID v ČDK</h1>
+            <p class="intro">Vložte seznam UUID. Každou hodnotu zadejte na samostatný řádek.</p>
+
+            <form id="bulk-form">
+                <label for="uuid-input">UUID</label>
+                <textarea id="uuid-input" placeholder="b98cae10-afb5-11ee-bd36-5ef3fc9bb22f&#10;uuid:b98cae10-afb5-11ee-bd36-5ef3fc9bb22f&#10;https://www.ndk.cz/view/uuid:b98cae10-afb5-11ee-bd36-5ef3fc9bb22f" spellcheck="false" required></textarea>
+                <p class="hint">Lze vložit UUID s předponou <code>uuid:</code>, bez předpony nebo celý odkaz z libovolného Krameria. Pokud odkaz obsahuje více UUID, například UUID dokumentu a UUID stránky v parametru <code>page</code>, nástroj ověří pouze poslední nalezené UUID.</p>
+                <label class="checkbox-option" for="remove-duplicates">
+                    <input id="remove-duplicates" type="checkbox" checked>
+                    Odstraňovat duplicitní hodnoty
+                </label>
+                <div class="controls">
+                    <button id="search-button" class="primary-button" type="submit">Ověřit seznam</button>
+                    <button id="clear-button" class="secondary-button" type="button">Vymazat</button>
+                    <button id="copy-button" class="secondary-button" type="button" disabled>Kopírovat nalezená UUID</button>
+                    <button id="csv-button" class="secondary-button" type="button" disabled>Stáhnout CSV</button>
+                </div>
+            </form>
+
+            <div id="status" role="status" aria-live="polite"></div>
+            <div id="progress-wrap" class="progress-wrap" aria-hidden="true"><div class="progress-bar"><div id="progress-fill" class="progress-fill"></div></div></div>
+
+            <section id="results" class="results" hidden>
+                <div class="results-header"><h2>Výsledky</h2><span id="results-summary"></span></div>
+                <div class="table-wrap">
+                    <table>
+                        <thead><tr><th>Stav</th><th>UUID</th><th>Název</th><th>Typ dokumentu</th><th>Rok</th><th>ČDK</th></tr></thead>
+                        <tbody id="results-body"></tbody>
+                    </table>
+                </div>
+            </section>
+        </section>
+        <footer>Jana Hrzinová 2026. Vyrobeno za pomoci ChatGPT 5.5</footer>
+    </main>
+
+    <script>
+        "use strict";
+        const CDK_API_URL = "https://api.ceskadigitalniknihovna.cz/search/api/client/v7.0/search";
+        const CDK_URL = "https://ceskadigitalniknihovna.cz/uuid/";
+        const REQUEST_DELAY_MS = 200;
+        const MODEL_LABELS = { monograph: "Monografie", periodical: "Periodikum", periodicalvolume: "Ročník periodika", periodicalitem: "Číslo periodika", page: "Stránka", article: "Článek", map: "Mapa", graphic: "Grafika", sheetmusic: "Notový tisk", manuscript: "Rukopis", soundrecording: "Zvukový dokument" };
+
+        const form = document.getElementById("bulk-form");
+        const input = document.getElementById("uuid-input");
+        const removeDuplicatesInput = document.getElementById("remove-duplicates");
+        const searchButton = document.getElementById("search-button");
+        const clearButton = document.getElementById("clear-button");
+        const copyButton = document.getElementById("copy-button");
+        const csvButton = document.getElementById("csv-button");
+        const statusBox = document.getElementById("status");
+        const progressWrap = document.getElementById("progress-wrap");
+        const progressFill = document.getElementById("progress-fill");
+        const resultsSection = document.getElementById("results");
+        const resultsBody = document.getElementById("results-body");
+        const resultsSummary = document.getElementById("results-summary");
+        let currentResults = [];
+
+        form.addEventListener("submit", async (event) => {
+            event.preventDefault();
+            const uuids = parseUuids(input.value, removeDuplicatesInput.checked);
+            if (uuids.length === 0) { showStatus("Vložte alespoň jedno platné UUID.", "error"); return; }
+            setProcessing(true); clearResults(); currentResults = [];
+            progressWrap.style.display = "block"; progressWrap.setAttribute("aria-hidden", "false");
+            for (let index = 0; index < uuids.length; index++) {
+                const uuid = uuids[index];
+                showStatus(`Ověřuji ${index + 1} z ${uuids.length}: ${uuid}`);
+                try { currentResults.push(await checkUuid(uuid)); }
+                catch (error) { currentResults.push({ uuid, found: false, status: "Chyba", title: "", type: "", year: "", error: error.message }); }
+                appendResultRow(currentResults[currentResults.length - 1]);
+                updateProgress(index + 1, uuids.length);
+                if (index < uuids.length - 1) await wait(REQUEST_DELAY_MS);
+            }
+            const foundCount = currentResults.filter(item => item.found).length;
+            resultsSummary.textContent = `Nalezeno: ${foundCount} · Nenalezeno nebo chyba: ${currentResults.length - foundCount}`;
+            copyButton.disabled = foundCount === 0; csvButton.disabled = false;
+            showStatus(`Ověření dokončeno. Nalezeno ${foundCount} z ${currentResults.length} UUID.`, foundCount === currentResults.length ? "success" : "warning");
+            setProcessing(false);
+        });
+
+        clearButton.addEventListener("click", () => { input.value = ""; currentResults = []; clearResults(); showStatus(""); input.focus(); });
+        copyButton.addEventListener("click", async () => {
+            const text = currentResults.filter(item => item.found).map(item => item.uuid).join("\n");
+            if (!text) return;
+            try { await navigator.clipboard.writeText(text); showStatus("Nalezená UUID byla zkopírována.", "success"); }
+            catch { showStatus("UUID se nepodařilo zkopírovat.", "error"); }
+        });
+        csvButton.addEventListener("click", () => {
+            const rows = [["stav","uuid","nazev","typ_dokumentu","rok","odkaz_cdk"]];
+            currentResults.forEach(item => rows.push([item.status, item.uuid, item.title, item.type, item.year, item.found ? CDK_URL + item.uuid : ""]));
+            const csv = rows.map(row => row.map(csvEscape).join(";")).join("\r\n");
+            const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" });
+            const url = URL.createObjectURL(blob); const link = document.createElement("a");
+            link.href = url; link.download = "overeni-uuid-cdk.csv"; document.body.appendChild(link); link.click(); link.remove(); URL.revokeObjectURL(url);
+        });
+
+        async function checkUuid(uuid) {
+            const parameters = new URLSearchParams({ q: `pid:"${escapeSolrValue(uuid)}"`, fl: "pid,model,root.model,title.search,root.title,date.str", rows: "10", start: "0", wt: "json" });
+            const response = await fetch(`${CDK_API_URL}?${parameters.toString()}`, { headers: { "Accept": "application/json" } });
+            if (!response.ok) throw new Error(`API ČDK vrátilo HTTP ${response.status}.`);
+            const data = await response.json(); const records = data?.response?.docs ?? [];
+            const record = records.find(item => toArray(item.pid).map(value => String(value).toLowerCase()).includes(uuid.toLowerCase()));
+            if (!record) return { uuid, found: false, status: "Nenalezeno", title: "", type: "", year: "", error: "" };
+            const model = firstValue(record.model); const rootModel = firstValue(record["root.model"]);
+            const title = (model === "page" || model === "periodicalvolume" || model === "periodicalitem") ? (firstValue(record["root.title"]) || firstValue(record["title.search"])) : (firstValue(record["title.search"]) || firstValue(record["root.title"]));
+            return { uuid, found: true, status: "Nalezeno", title, type: getDocumentType(model, rootModel), year: firstValue(record["date.str"]), error: "" };
+        }
+
+        function appendResultRow(result) {
+            const row = document.createElement("tr");
+            const status = document.createElement("td"); status.textContent = result.error ? `${result.status}: ${result.error}` : result.status; status.className = result.found ? "status-cell-found" : "status-cell-missing";
+            const uuid = document.createElement("td"); const code = document.createElement("code"); code.textContent = result.uuid; uuid.appendChild(code);
+            const title = document.createElement("td"); title.textContent = result.title || "—";
+            const type = document.createElement("td"); type.textContent = result.type || "—";
+            const year = document.createElement("td"); year.textContent = result.year || "—";
+            const linkCell = document.createElement("td");
+            if (result.found) { const link = document.createElement("a"); link.className = "table-link"; link.href = CDK_URL + result.uuid; link.target = "_blank"; link.rel = "noopener noreferrer"; link.textContent = "Otevřít v ČDK"; linkCell.appendChild(link); } else linkCell.textContent = "—";
+            row.append(status, uuid, title, type, year, linkCell); resultsBody.appendChild(row); resultsSection.hidden = false;
+        }
+
+        function parseUuids(value, removeDuplicates) {
+            const normalized = value
+                .split(/\r?\n/)
+                .flatMap(extractUuids)
+                .filter(Boolean);
+
+            return removeDuplicates
+                ? [...new Set(normalized)]
+                : normalized;
+        }
+
+        function extractUuids(value) {
+            const text = decodeSafely(String(value || "").trim());
+
+            if (!text) {
+                return [];
+            }
+
+            const uuidPattern = /(?:uuid:)?([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/gi;
+            const uuids = [];
+            let match;
+
+            while ((match = uuidPattern.exec(text)) !== null) {
+                uuids.push(`uuid:${match[1].toLowerCase()}`);
+            }
+
+            /*
+             * Pokud odkaz obsahuje UUID dokumentu i UUID konkrétní stránky
+             * (např. v parametru page), použije se poslední UUID v odkazu.
+             */
+            return uuids.length > 0
+                ? [uuids[uuids.length - 1]]
+                : [];
+        }
+
+        function decodeSafely(value) {
+            try {
+                return decodeURIComponent(value);
+            } catch {
+                return value;
+            }
+        }
+        function getDocumentType(model, rootModel) { if (model === "page" && rootModel === "monograph") return "Stránka monografie"; if (model === "page" && rootModel === "periodical") return "Stránka periodika"; return MODEL_LABELS[model] || model || "Neurčený typ"; }
+        function escapeSolrValue(value) { return value.replace(/\\/g, "\\\\").replace(/"/g, '\\"'); }
+        function toArray(value) { if (Array.isArray(value)) return value.filter(item => item !== null && item !== undefined); return value === null || value === undefined ? [] : [value]; }
+        function firstValue(value) { return toArray(value).map(item => String(item).trim()).find(Boolean) || ""; }
+        function updateProgress(done, total) { progressFill.style.width = `${Math.round((done / total) * 100)}%`; }
+        function setProcessing(value) { searchButton.disabled = value; clearButton.disabled = value; input.disabled = value; removeDuplicatesInput.disabled = value; searchButton.textContent = value ? "Ověřuji…" : "Ověřit seznam"; }
+        function clearResults() { resultsBody.replaceChildren(); resultsSection.hidden = true; resultsSummary.textContent = ""; progressFill.style.width = "0"; progressWrap.style.display = "none"; progressWrap.setAttribute("aria-hidden", "true"); copyButton.disabled = true; csvButton.disabled = true; }
+        function showStatus(message, type = "") { statusBox.textContent = message; statusBox.className = type ? `status-${type}` : ""; }
+        function csvEscape(value) { const text = String(value ?? ""); return text.includes(";") || text.includes('"') || text.includes("\n") ? `"${text.replace(/"/g, '""')}"` : text; }
+        function wait(milliseconds) { return new Promise(resolve => window.setTimeout(resolve, milliseconds)); }
+    </script>
+</body>
+</html>
