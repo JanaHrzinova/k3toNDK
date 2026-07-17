@@ -262,11 +262,12 @@
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            min-height: 44px;
-            padding: 10px 16px;
-            border-radius: 8px;
+            min-height: 34px;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 0.9rem;
             text-decoration: none;
-            font-weight: 700;
+            font-weight: 600;
             cursor: pointer;
         }
 
@@ -712,7 +713,7 @@
             oldLink.href = KRAMERIUS3_HANDLE_URL + handle;
             oldLink.target = "_blank";
             oldLink.rel = "noopener noreferrer";
-            oldLink.textContent = "Otevřít dokument v K3";
+            oldLink.textContent = "Otevřít v K3";
 
             actions.appendChild(oldLink);
             resultBox.appendChild(actions);
@@ -780,7 +781,13 @@
             documentLink.href = DOCUMENT_URL + pid;
             documentLink.target = "_blank";
             documentLink.rel = "noopener noreferrer";
-            documentLink.textContent = "Otevřít dokument v NDK";
+            documentLink.textContent = "Otevřít v NDK";
+
+            const k3Link = createElement("a", "button");
+            k3Link.href = KRAMERIUS3_HANDLE_URL + handle;
+            k3Link.target = "_blank";
+            k3Link.rel = "noopener noreferrer";
+            k3Link.textContent = "Otevřít v K3";
 
             const copyUuidButton = createElement("button", "copy-button");
             copyUuidButton.type = "button";
@@ -798,6 +805,7 @@
 
             actions.append(
                 documentLink,
+                k3Link,
                 copyUuidButton,
                 copyHandleButton
             );
