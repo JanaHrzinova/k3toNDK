@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Test přímého načtení starého odkazu Kramerius 3 a získání persistentního Handle.">
+  <title>Test Kramerius 3 → Handle</title>
+  <style>
+    :root {
+      --background: #f5f7fa;
+      --surface: #ffffff;
+      --text: #202124;
+      --muted: #5f6368;
+      --border: #d7dce2;
+      --primary: #185abc;
+      --primary-hover: #124a9c;
+      --secondary: #eef3fb;
+      --error: #a50e0e;
+      --success: #137333;
+      --warning: #8a5a00;
+      --shadow: 0 8px 24px rgba(32, 33, 36, 0.08);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--background);
+      color: var(--text);
+      font-family: Arial, Helvetica, sans-serif;
+      line-height: 1.5;
+    }
+
+    main {
+      width: min(860px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 48px 0;
+    }
+
+    .panel {
+      padding: 30px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      box-shadow: var(--shadow);
+    }
+
+    h1 {
+      margin: 0 0 12px;
+      font-size: clamp(1.8rem, 4vw, 2.5rem);
+      line-height: 1.15;
+    }
+
+    .intro {
+      margin: 0 0 28px;
+      color: var(--muted);
+    }
+
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 700;
+    }
+
+    input, button { font: inherit; }
+
+    input {
+      width: 100%;
+      min-height: 48px;
+      padding: 11px 13px;
+      border: 1px solid #7a8088;
+      border-radius: 8px;
+      background: #fff;
+      color: var(--text);
+    }
+
+    input:focus {
+      outline: 3px solid rgba(24, 90, 188, 0.24);
+      border-color: var(--primary);
+    }
+
+    .hint {
+      margin: 8px 0 0;
+      color: var(--muted);
+      font-size: 0.92rem;
+      overflow-wrap: anywhere;
+    }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    button, .button {
+      min-height: 46px;
+      padding: 10px 16px;
+      border-radius: 8px;
+      font-weight: 700;
+      cursor: pointer;
+      text-decoration: none;
+    }
+
+    .primary-button {
+      border: 1px solid var(--primary);
+      background: var(--primary);
+      color: #fff;
+    }
+
+    .primary-button:hover {
+      background: var(--primary-hover);
+      border-color: var(--primary-hover);
+    }
+
+    .secondary-button {
+      border: 1px solid var(--primary);
+      background: var(--secondary);
+      color: var(--primary-hover);
+    }
+
+    .secondary-button:hover { background: #dfe9f8; }
+    button:disabled { cursor: wait; opacity: 0.7; }
+
+    #status {
+      min-height: 24px;
+      margin-top: 20px;
+      font-weight: 700;
+    }
+
+    .status-error { color: var(--error); }
+    .status-success { color: var(--success); }
+    .status-warning { color: var(--warning); }
+
+    .result-card {
+      margin-top: 24px;
+      padding: 24px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: #fff;
+    }
+
+    .result-card h2 {
+      margin: 0 0 18px;
+      font-size: 1.4rem;
+    }
+
+    .metadata-row {
+      margin: 0 0 12px;
+      overflow-wrap: anywhere;
+    }
+
+    .metadata-label { font-weight: 700; }
+
+    code {
+      font-family: Consolas, "Courier New", monospace;
+      overflow-wrap: anywhere;
+      word-break: break-all;
+    }
+
+    .diagnostics {
+      margin-top: 22px;
+      padding-top: 18px;
+      border-top: 1px solid var(--border);
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    footer {
+      margin-top: 18px;
+      color: var(--muted);
+      font-size: 0.9rem;
+      text-align: center;
+    }
+
+    @media (max-width: 600px) {
+      main { width: min(100% - 20px, 860px); padding: 20px 0; }
+      .panel { padding: 22px 18px; }
+      .controls { flex-direction: column; }
+      .controls button, .controls .button { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <section class="panel" aria-labelledby="page-title">
+      <h1 id="page-title">Test starého odkazu Kramerius 3</h1>
+      <p class="intro">
+        Stránka zkusí přímo z prohlížeče načíst starou adresu Krameria 3,
+        vyhledat v HTML persistentní odkaz a zobrazit Handle. Slouží také jako test CORS na GitHub Pages.
+      </p>
+
+      <form id="test-form">
+        <label for="old-url">Starý odkaz Kramerius 3</label>
+        <input
+          id="old-url"
+          type="url"
+          value="https://kramerius.nkp.cz/kramerius/MShowMonograph.do?id=14256"
+          placeholder="https://kramerius.nkp.cz/kramerius/MShowMonograph.do?id=14256"
+          autocomplete="off"
+          spellcheck="false"
+          required
+        >
+        <p class="hint">
+          Povolen je pouze server <code>kramerius.nkp.cz</code> a cesta <code>/kramerius/MShowMonograph.do</code>.
+        </p>
+
+        <div class="controls">
+          <button id="test-button" class="primary-button" type="submit">Načíst a zjistit Handle</button>
+          <button id="clear-button" class="secondary-button" type="button">Vymazat výsledek</button>
+        </div>
+      </form>
+
+      <div id="status" role="status" aria-live="polite"></div>
+      <div id="result"></div>
+    </section>
+
+    <footer>Testovací stránka pro GitHub Pages</footer>
+  </main>
+
+  <script>
+    "use strict";
+
+    const form = document.getElementById("test-form");
+    const urlInput = document.getElementById("old-url");
+    const testButton = document.getElementById("test-button");
+    const clearButton = document.getElementById("clear-button");
+    const statusBox = document.getElementById("status");
+    const resultBox = document.getElementById("result");
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      clearOutput();
+
+      let oldUrl;
+      try {
+        oldUrl = validateOldKrameriusUrl(urlInput.value);
+      } catch (error) {
+        showStatus(error.message, "error");
+        urlInput.focus();
+        return;
+      }
+
+      setLoading(true);
+      const startedAt = performance.now();
+
+      try {
+        const response = await fetch(oldUrl.href, {
+          method: "GET",
+          headers: { "Accept": "text/html,application/xhtml+xml" },
+          cache: "no-store"
+        });
+
+        const elapsedMs = Math.round(performance.now() - startedAt);
+
+        if (!response.ok) {
+          throw new Error(`Kramerius vrátil HTTP ${response.status}.`);
+        }
+
+        const html = await response.text();
+        const resolved = extractHandleFromHtml(html, oldUrl.href);
+
+        renderResult({
+          sourceUrl: oldUrl.href,
+          handle: resolved.handle,
+          uri: resolved.uri,
+          httpStatus: response.status,
+          htmlLength: html.length,
+          elapsedMs
+        });
+
+        showStatus(
+          "Test proběhl úspěšně. GitHub Pages mohou tuto stránku Krameria načíst přímo.",
+          "success"
+        );
+      } catch (error) {
+        console.error(error);
+
+        const corsMessage = error instanceof TypeError
+          ? "Požadavek selhal. Pokud stránka funguje přímo v Krameriu, může jít o CORS, síťovou chybu nebo blokování prohlížečem."
+          : error.message;
+
+        showStatus(corsMessage, "error");
+      } finally {
+        setLoading(false);
+      }
+    });
+
+    clearButton.addEventListener("click", () => {
+      clearOutput();
+      urlInput.focus();
+    });
+
+    function validateOldKrameriusUrl(value) {
+      let url;
+
+      try {
+        url = new URL(value.trim());
+      } catch {
+        throw new Error("Zadejte platnou úplnou URL adresu.");
+      }
+
+      if (url.protocol !== "https:" && url.protocol !== "http:") {
+        throw new Error("Adresa musí používat protokol HTTP nebo HTTPS.");
+      }
+
+      if (url.hostname.toLowerCase() !== "kramerius.nkp.cz") {
+        throw new Error("Adresa musí směřovat na kramerius.nkp.cz.");
+      }
+
+      if (url.pathname !== "/kramerius/MShowMonograph.do") {
+        throw new Error("Adresa musí mít tvar MShowMonograph.do?id=…");
+      }
+
+      const id = url.searchParams.get("id");
+
+      if (!id || !/^\d+$/.test(id)) {
+        throw new Error("V adrese chybí platný číselný parametr id.");
+      }
+
+      return url;
+    }
+
+    function extractHandleFromHtml(html, baseUrl) {
+      const parsed = new DOMParser().parseFromString(html, "text/html");
+
+      const links = [...parsed.querySelectorAll("a[href]")];
+      const handleLink = links.find((link) => {
+        try {
+          const absolute = new URL(link.getAttribute("href"), baseUrl);
+          return /^\/kramerius\/handle\/[A-Za-z0-9._-]+\/.+/.test(absolute.pathname);
+        } catch {
+          return false;
+        }
+      });
+
+      let uri = "";
+
+      if (handleLink) {
+        uri = new URL(handleLink.getAttribute("href"), baseUrl).href;
+      }
+
+      if (!uri) {
+        const textMatch = html.match(
+          /https?:\/\/kramerius\.nkp\.cz\/kramerius\/handle\/[A-Za-z0-9._-]+\/[A-Za-z0-9._~!$&'()*+,;=:@%/-]+/i
+        );
+
+        if (textMatch) {
+          uri = textMatch[0];
+        }
+      }
+
+      if (!uri) {
+        throw new Error("HTML se načetlo, ale persistentní odkaz Handle v něm nebyl nalezen.");
+      }
+
+      const handleUrl = new URL(uri);
+      const prefix = "/kramerius/handle/";
+      const handle = decodeURIComponent(handleUrl.pathname.slice(prefix.length));
+
+      if (!handle || !handle.includes("/")) {
+        throw new Error("Persistentní odkaz byl nalezen, ale Handle se nepodařilo rozpoznat.");
+      }
+
+      return { uri: handleUrl.href, handle };
+    }
+
+    function renderResult(data) {
+      const card = document.createElement("section");
+      card.className = "result-card";
+
+      const heading = document.createElement("h2");
+      heading.textContent = "Výsledek testu";
+
+      const handleRow = createMetadataRow("Handle", data.handle, true);
+      const uriRow = createMetadataRow("Persistentní URI", data.uri, true);
+      const sourceRow = createMetadataRow("Zdrojová adresa", data.sourceUrl, true);
+
+      const actions = document.createElement("div");
+      actions.className = "controls";
+
+      const openLink = document.createElement("a");
+      openLink.className = "button primary-button";
+      openLink.href = data.uri;
+      openLink.target = "_blank";
+      openLink.rel = "noopener noreferrer";
+      openLink.textContent = "Otevřít persistentní odkaz";
+
+      const copyButton = document.createElement("button");
+      copyButton.className = "secondary-button";
+      copyButton.type = "button";
+      copyButton.textContent = "Kopírovat Handle";
+      copyButton.addEventListener("click", async () => {
+        const original = copyButton.textContent;
+        try {
+          await navigator.clipboard.writeText(data.handle);
+          copyButton.textContent = "Zkopírováno";
+        } catch {
+          copyButton.textContent = "Kopírování selhalo";
+        }
+        window.setTimeout(() => { copyButton.textContent = original; }, 1800);
+      });
+
+      actions.append(openLink, copyButton);
+
+      const diagnostics = document.createElement("div");
+      diagnostics.className = "diagnostics";
+      diagnostics.innerHTML =
+        `<strong>Diagnostika:</strong> HTTP ${data.httpStatus} · ` +
+        `${data.htmlLength.toLocaleString("cs-CZ")} znaků HTML · ` +
+        `${data.elapsedMs} ms`;
+
+      card.append(heading, handleRow, uriRow, sourceRow, actions, diagnostics);
+      resultBox.replaceChildren(card);
+    }
+
+    function createMetadataRow(label, value, asCode = false) {
+      const row = document.createElement("p");
+      row.className = "metadata-row";
+
+      const labelElement = document.createElement("span");
+      labelElement.className = "metadata-label";
+      labelElement.textContent = `${label}: `;
+
+      const valueElement = asCode
+        ? document.createElement("code")
+        : document.createElement("span");
+      valueElement.textContent = value;
+
+      row.append(labelElement, valueElement);
+      return row;
+    }
+
+    function setLoading(isLoading) {
+      testButton.disabled = isLoading;
+      clearButton.disabled = isLoading;
+      urlInput.disabled = isLoading;
+      testButton.textContent = isLoading
+        ? "Načítám…"
+        : "Načíst a zjistit Handle";
+
+      if (isLoading) {
+        showStatus("Načítám HTML přímo z Krameria…");
+      }
+    }
+
+    function showStatus(message, type = "") {
+      statusBox.textContent = message;
+      statusBox.className = "";
+
+      if (type === "error") statusBox.classList.add("status-error");
+      if (type === "success") statusBox.classList.add("status-success");
+      if (type === "warning") statusBox.classList.add("status-warning");
+    }
+
+    function clearOutput() {
+      statusBox.textContent = "";
+      statusBox.className = "";
+      resultBox.replaceChildren();
+    }
+  </script>
+</body>
+</html>
